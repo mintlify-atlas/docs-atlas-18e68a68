@@ -1,0 +1,73 @@
+---
+title: 'OpenCode SDK'
+description: Use the OpenCode SDK instead of the Claude Agent SDK for API generation sessions.
+---
+
+[OpenCode](https://opencode.ai) is an open-source Claude Code alternative that runs as a local HTTP server at `http://127.0.0.1:4096`. When you select the OpenCode SDK, reverse-api-engineer sends engineering requests to that server via httpx instead of calling the Claude Agent SDK directly.
+
+This gives you access to a wider range of models — any provider and model that OpenCode supports — rather than being limited to the Claude models built into the CLI.
+
+## How it works
+
+reverse-api-engineer connects to your local OpenCode server, creates a session, streams events in real time, and auto-approves any permission prompts so the agent can proceed without interruption. The same HAR analysis and code generation logic runs regardless of which SDK you choose.
+
+## Prerequisites
+
+OpenCode must be running locally before you start a session:
+
+```bash
+opencode serve
+```
+
+reverse-api-engineer will fail with a connection error if the server is not reachable at `http://127.0.0.1:4096`.
+
+## Configuration
+
+Switch to the OpenCode SDK in the interactive settings menu or by editing `~/.reverse-api/config.json` directly.
+
+<Steps>
+  <Step title="Open settings">
+    In the CLI, run `/settings` and select **SDK** → **opencode**.
+
+    Or edit `~/.reverse-api/config.json`:
+
+    ```json
+    {
+      "sdk": "opencode",
+      "opencode_provider": "anthropic",
+      "opencode_model": "claude-opus-4-6"
+    }
+    ```
+  </Step>
+
+  <Step title="Choose a model">
+    Set `opencode_model` to any model ID supported by your OpenCode installation. The format is `{provider}/{model}` — for example:
+
+    ```json
+    {
+      "opencode_provider": "anthropic",
+      "opencode_model": "claude-sonnet-4-6"
+    }
+    ```
+
+    Browse available models at [models.dev](https://models.dev).
+  </Step>
+</Steps>
+
+## Configuration reference
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `sdk` | `"claude"` | Set to `"opencode"` to use this integration. |
+| `opencode_provider` | `"anthropic"` | The provider ID passed to OpenCode (e.g., `"anthropic"`, `"google"`, `"openai"`). |
+| `opencode_model` | `"claude-opus-4-6"` | The model ID passed to OpenCode. Use `{provider}/{model}` format when required. |
+
+## Debugging
+
+Set `OPENCODE_DEBUG=1` before running to enable detailed logging of every event received from the OpenCode server:
+
+```bash
+OPENCODE_DEBUG=1 reverse-api-engineer
+```
+
+Debug output includes event types, session state transitions, tool calls, and the full traceback for any errors.

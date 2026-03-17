@@ -1,0 +1,93 @@
+---
+title: "Collector mode"
+description: "AI-powered web data collection with automatic JSON and CSV export."
+---
+
+Collector mode uses an AI agent to search the web, browse pages, and gather structured data based on a natural language prompt. The results are automatically exported to JSON and CSV files.
+
+Unlike the other modes, collector mode does not capture HAR files or generate API clients. It is purpose-built for extracting and saving structured data.
+
+## How to use it
+
+Press **Shift+Tab** until `[collector]` appears in the prompt, then describe the data you want to collect:
+
+```
+[collector] > Find 3 JS frameworks
+```
+
+```
+[collector] > Collect top 10 Python libraries with name, description, and GitHub stars
+```
+
+The agent uses `WebFetch`, `WebSearch`, and file tools to autonomously search, browse, and save items as it finds them. When collection is complete, the output files appear in two locations:
+
+- `~/.reverse-api/runs/collected/{folder_name}/` — permanent storage
+- `./collected/{folder_name}/` — local copy
+
+## Output files
+
+<Columns cols={3}>
+  <Card title="items.json" icon="brackets-curly">
+    All collected items in JSON format, one object per item.
+  </Card>
+  <Card title="items.csv" icon="table">
+    All collected items in CSV format with auto-detected columns.
+  </Card>
+  <Card title="README.md" icon="book">
+    Collection metadata: query, run ID, item count, sources, and a schema listing every field.
+  </Card>
+</Columns>
+
+## Example
+
+```bash
+$ reverse-api-engineer
+[collector] > Find 3 JS frameworks
+
+# Agent autonomously searches and collects data
+# Data saved to: ./collected/js_frameworks/
+```
+
+The resulting `items.json` contains structured records like:
+
+```json
+[
+  {
+    "name": "React",
+    "description": "A JavaScript library for building user interfaces",
+    "website": "https://react.dev",
+    "source_url": "https://github.com/facebook/react"
+  }
+]
+```
+
+## Configuration
+
+Collector mode uses the `collector_model` setting. The default is `claude-sonnet-4-6`. Change it by editing `~/.reverse-api/config.json` directly:
+
+```json
+{
+  "collector_model": "claude-sonnet-4-6"
+}
+```
+
+<Note>
+  Collector mode requires `ANTHROPIC_API_KEY` — it always uses the Claude Agent SDK regardless of your SDK setting.
+</Note>
+
+## When to use collector mode
+
+<Columns cols={2}>
+  <Card title="Research and surveys" icon="magnifying-glass">
+    Gather lists of tools, libraries, companies, or any other structured set of items from across the web.
+  </Card>
+  <Card title="Data aggregation" icon="layer-group">
+    Combine information from multiple sources into a single normalized dataset.
+  </Card>
+  <Card title="CSV exports" icon="file-csv">
+    Collect data that you want to open in a spreadsheet or import into another tool.
+  </Card>
+  <Card title="Lightweight scraping" icon="spider">
+    Extract structured content from public pages without writing a scraper.
+  </Card>
+</Columns>

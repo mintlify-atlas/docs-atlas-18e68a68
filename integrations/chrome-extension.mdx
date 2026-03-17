@@ -1,0 +1,79 @@
+---
+title: 'Chrome extension'
+description: Browser-native HAR capture with a side panel UI (work in progress).
+---
+
+<Warning>
+The Chrome extension is a work in progress. Features and setup steps may change before the stable release.
+</Warning>
+
+The Chrome extension provides browser-native integration with reverse-api-engineer. It captures network traffic directly through Chrome's Debugger API and surfaces a side panel UI for managing captures and chatting with the AI agent — without leaving the browser.
+
+**What it does:**
+
+<Columns cols={2}>
+  <Card title="HAR capture" icon="network-wired">
+    Records network traffic using Chrome's Debugger API, the same approach Chrome DevTools uses internally.
+  </Card>
+  <Card title="Side panel UI" icon="sidebar">
+    An interactive panel for starting and stopping captures, reviewing results, and chatting with the reverse engineering agent.
+  </Card>
+  <Card title="Native host integration" icon="plug">
+    Communicates with the reverse-api-engineer CLI over Chrome's native messaging protocol.
+  </Card>
+</Columns>
+
+## Prerequisites
+
+- Node.js and npm
+- Chrome browser
+- reverse-api-engineer CLI installed
+- Claude Code CLI: `npm install -g @anthropic-ai/claude-code`
+
+## Setup
+
+<Steps>
+  <Step title="Build the extension">
+    ```bash
+    cd chrome-extension
+    npm install
+    npm run build
+    ```
+  </Step>
+
+  <Step title="Load the extension in Chrome">
+    1. Go to `chrome://extensions/`
+    2. Enable **Developer mode** (top-right toggle)
+    3. Click **Load unpacked** and select the `chrome-extension/dist` directory
+    4. Copy the **extension ID** — it is the 32-character string shown under the extension name
+  </Step>
+
+  <Step title="Install the native host">
+    The native host connects the Chrome extension to the CLI.
+
+    ```bash
+    reverse-api-engineer install-host --extension-id YOUR_EXTENSION_ID
+    ```
+
+    Replace `YOUR_EXTENSION_ID` with the ID you copied in the previous step.
+  </Step>
+
+  <Step title="Approve Claude Code on macOS (macOS only)">
+    Run the following command once to let Gatekeeper verify the Claude Code binary:
+
+    ```bash
+    claude --version
+    ```
+
+    If macOS shows a security popup, go to **System Settings > Privacy & Security** and click **Allow Anyway**, then run the command again.
+  </Step>
+</Steps>
+
+## Development
+
+```bash
+npm run dev    # Watch mode — rebuilds automatically on file changes
+npm run build  # Production build
+```
+
+After each rebuild in watch mode, go to `chrome://extensions/` and click the reload icon on the extension card to apply changes.

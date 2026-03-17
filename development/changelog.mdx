@@ -1,0 +1,272 @@
+---
+title: "Changelog"
+description: "Version history and release notes for reverse-api-engineer"
+---
+
+All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+<AccordionGroup>
+
+  <Accordion title="0.4.5 — 2026-03-15">
+    ### Fixed
+
+    - **Stream closed errors (#51)**: Reverted from `query()` to `ClaudeSDKClient`, which maintains a persistent bidirectional connection and eliminates "Error in hook callback hook_0: Stream closed" errors. The original AUQ fix (v0.4.3) unnecessarily switched APIs — only the `can_use_tool` callback signature needed updating.
+    - **`CLAUDECODE` env var leak**: Clear the inherited `CLAUDECODE` env var from the CLI subprocess to prevent nested session interference when running inside Claude Code.
+    - **CLI stderr noise**: Filter minified JS stack traces into a single clean error line. Use `DEBUG=1` for full output.
+
+    ### Changed
+
+    - **`claude-agent-sdk`**: Bumped minimum version to 0.1.48.
+    - **Agent mode**: No longer prompts for a URL — the agent navigates autonomously.
+    - **Header UI**: Version and task labels now use mode-specific colors (agent = coral, engineer = blue, collector = gold).
+  </Accordion>
+
+  <Accordion title="0.4.4 — 2026-03-15">
+    ### Fixed
+
+    - **Stream closed errors (#51)**: Partial fix using `query()` with env var workarounds. Superseded by v0.4.5.
+  </Accordion>
+
+  <Accordion title="0.4.3 — 2026-03-12">
+    ### Fixed
+
+    - **`AskUserQuestion` interactive prompt**: Fixed interactive questionary UI not rendering in engineer and agent modes. Switched from `ClaudeSDKClient` to `query()` function, as `ClaudeSDKClient` silently auto-approves `AskUserQuestion` without triggering the `can_use_tool` callback.
+  </Accordion>
+
+  <Accordion title="0.4.2 — 2026-03-12">
+    ### Fixed
+
+    - **Engineer client resolution**: Prefer the active engineer client recorded in session history over config defaults, preventing iterative edits from switching to the wrong file when multiple language clients exist.
+  </Accordion>
+
+  <Accordion title="0.4.1 — 2026-03-12">
+    ### Added
+
+    - **`show` CLI subcommand**: View details of a specific run by ID.
+    - **Chrome Extension improvements**: Multi-session support, codegen recording, and side panel UX overhaul.
+      - Session isolation fixes to prevent capture data bleeding across sessions
+      - Message persistence across panel reloads and session switches
+      - Traffic list with expandable request details and a clear button
+      - Restricted page detection with user feedback
+      - ANSI escape code stripping in terminal output
+      - PrismLight language fallback for unregistered languages
+      - Bundle size reduced from 1112 KB to 436 KB (removed shiki, lucide-react, ansi-to-react, @base-ui/react)
+    - **Mintlify API client example**
+
+    ### Changed
+
+    - **Background update check**: Version check now runs in a background thread to avoid blocking CLI startup.
+
+    ### Fixed
+
+    - **Engineer language preservation**: Iterative edits now preserve the original output language instead of resetting.
+    - **Native host Gatekeeper handling**: Scoped `xattr` to the actual claude-code package directory.
+    - **Codegen selector escaping**: Dynamic attribute values now escaped with `CSS.escape()` to prevent broken selectors.
+    - **Chrome Extension manifest**: Removed unused `scripting` permission; pinned devicon CDN to v2.16.0.
+  </Accordion>
+
+  <Accordion title="0.4.0 — 2026-03-10">
+    ### Added
+
+    - **`list` CLI subcommand**: Non-interactive command to list generated scripts and runs.
+      - Rich table output (compact and full modes) and JSON output (`--json`)
+      - Filter by mode (`--mode`), model (`--model`), prompt search (`--search`), and limit (`--limit`)
+      - Shows script directory paths, file counts, and local path detection
+  </Accordion>
+
+  <Accordion title="0.3.3 — 2026-03-10">
+    ### Added
+
+    - **GitHub Copilot SDK**: Third SDK option for reverse engineering using GitHub Copilot.
+      - New `CopilotEngineer` for HAR analysis via Copilot subscription (cost: $0)
+      - Auto mode support with MCP browser integration via Copilot SDK
+      - Interactive `AskUserQuestion` tool support for Copilot sessions
+      - Permission handler and tool use hooks for agent visibility
+      - Install with: `pip install 'reverse-api-engineer[copilot]'`
+    - **Comprehensive test suite**: 593 tests achieving 97.4% code coverage.
+
+    ### Changed
+
+    - **Claude model updates**: Updated from Claude 4.5 to Claude 4.6 (Opus and Sonnet).
+    - **Sync filtering**: Unified sync filtering logic with relative paths; excludes `node_modules`.
+    - **TUI improvements**: Reduced thinking truncation for better agent visibility.
+
+    ### Fixed
+
+    - **Python 3.11 compatibility**: Fixed multi-line f-string expressions that required Python 3.12+.
+    - **Thread safety**: Used `loop.call_soon_threadsafe` for Copilot SDK event callbacks.
+    - **Session timeouts**: Added 10-minute timeout protection for Copilot session completion.
+    - **Resource cleanup**: Ensured `CopilotClient` is always stopped via `try/finally`.
+    - **HAR recording**: Changed HAR recording content mode to embed and optimized file saving.
+  </Accordion>
+
+  <Accordion title="0.3.2 — 2026-01-15">
+    ### Added
+
+    - **Update notifications**: CLI now checks for newer versions on startup and displays an update prompt.
+
+    ### Changed
+
+    - **README improvements**: Redesigned badge styling with flat-square style and centered layout.
+    - **Banner redesign**: Modernized SVG banner with centered content and improved visual hierarchy.
+    - **Font compatibility**: Fixed banner fonts for better GitHub rendering support.
+
+    ### Fixed
+
+    - **Banner display**: Corrected package name display and font rendering in GitHub.
+  </Accordion>
+
+  <Accordion title="0.3.1 — 2026-01-15">
+    ### Added
+
+    - **Chrome Extension (WIP)**: Beta support for capturing browser traffic via Chrome extension.
+      - Alternative to Playwright browser for HAR capture
+      - Works with existing browser sessions
+
+    ### Fixed
+
+    - **OpenCode server**: Fixed error formatting and connection handling.
+    - **Process title**: Added process title for better identification in system monitors.
+    - **Auth error handling**: Improved handling of authentication failures.
+  </Accordion>
+
+  <Accordion title="0.3.0 — 2026-01-10">
+    ### Added
+
+    - **Collector mode**: New AI-powered web data collection mode using Claude Agent SDK.
+      - Natural language prompts to collect structured data from any website
+      - Automatic export to JSON and CSV formats
+      - Generates README with collection metadata and schema
+      - Uses WebFetch, WebSearch, and file tools for autonomous collection
+    - **Playwright codegen**: Generate automation scripts from recorded browser actions.
+      - Captures clicks, fills, key presses, and navigations
+      - Produces stealth-enabled Playwright scripts with proper escaping
+      - Deduplicates redundant fill actions and navigations
+    - **`@docs` tag**: Generate OpenAPI specifications from HAR files.
+    - **`@record-only` tag**: Record HAR files without the reverse engineering step.
+    - **`AskUserQuestion` tool**: Interactive prompts during engineering sessions.
+    - **JS/TS client generation**: Support for generating JavaScript and TypeScript API clients.
+
+    ### Changed
+
+    - **Improved HAR filtering**: Better path-based filtering for skip patterns.
+    - **Enhanced price computation**: Fixed pricing for the OpenCode provider.
+    - **Centralized run resolution**: Refactored latest run parsing logic.
+
+    ### Fixed
+
+    - **Selector escaping**: Fixed attribute selector escaping for special characters in `name`, `data-testid`, `aria-label`, and `placeholder` values.
+    - **Null checks in codegen**: Added validation for `action.selector` and `action.value` to prevent crashes.
+    - **CSV export**: Fixed `DictWriter` error when items have inconsistent keys.
+    - **HAR validation**: Validate HAR file exists when using the `@docs` tag.
+  </Accordion>
+
+  <Accordion title="0.2.10 — 2026-01-03">
+    ### Added
+
+    - **Claude Code plugin**: Official plugin for seamless integration with Claude Code CLI.
+      - Three operation modes: manual browser capture, autonomous agent browsing, and re-engineering from HAR files
+      - Comprehensive skill system with progressive disclosure of reverse engineering techniques
+      - Slash commands for quick access: `/agent`, `/engineer`, `/manual`
+    - **Example API clients**: Production-ready examples for Apple Jobs, Ashby Jobs, Ikea, and Uber Careers.
+    - **Engineer tagging system**: Automatic tagging of runs with descriptive identifiers for better organization.
+
+    ### Changed
+
+    - **Enhanced auto mode**: Improved MCP browser integration with better error handling.
+    - **Better sync fallback**: More robust file synchronization with fallback mechanisms.
+
+    ### Fixed
+
+    - **Agent mode screenshots**: Reduced unnecessary screenshot captures in agent mode.
+    - **Sync error handling**: Fixed sync fallback when primary sync method fails.
+  </Accordion>
+
+  <Accordion title="0.2.9 — 2025-12-30">
+    ### Added
+
+    - **Real-time file sync**: Watch and automatically sync generated scripts to the local directory.
+      - Debounced file watching with configurable delay (default 500ms)
+      - Visual feedback for sync operations in the terminal UI
+      - Prevents overwriting existing directories by appending a counter suffix
+    - **MCP browser integration**: Native integration with `rae-playwright-mcp` for auto mode.
+      - Seamless browser automation via Model Context Protocol
+      - Works with both Claude SDK and OpenCode SDK
+    - **CLAUDE.md autogeneration**: Automatic generation of project documentation for Claude Code.
+
+    ### Fixed
+
+    - **Sync directory overwrite**: Fixed issue where sync would overwrite existing directories.
+    - **Sync resource leaks**: Fixed memory leaks when sync errors occurred.
+  </Accordion>
+
+  <Accordion title="0.2.8 — 2025-12-28">
+    ### Added
+
+    - **Three-tier pricing fallback system**: Automatic pricing lookup for 100+ LLM models.
+      - Local pricing for common models (highest priority)
+      - Optional LiteLLM integration for extended coverage (`pip install 'reverse-api-engineer[pricing]'`)
+      - Default fallback to Claude Sonnet 4.5 pricing
+    - **New model pricing**: Added pricing for Gemini 3 and Claude thinking series models.
+
+    ### Changed
+
+    - **Enhanced OpenCode prompts**: Improved prompt handling for code generation.
+    - **Better folder naming**: Folder name generation with OpenCode SDK.
+
+    ### Fixed
+
+    - Model name mismatch in pricing lookups.
+    - Pricing computation for extended thinking models.
+  </Accordion>
+
+  <Accordion title="0.2.7 — 2025-12-27">
+    ### Changed
+
+    - **Version management**: Implemented single source of truth for versioning. Version is now defined only in `pyproject.toml`; `__init__.py` reads it dynamically via `importlib.metadata`.
+  </Accordion>
+
+  <Accordion title="0.2.1 — 2025-12-26">
+    ### Added
+
+    - **Stagehand agent support**: Added Stagehand as an alternative agent provider alongside browser-use.
+      - Supports OpenAI Computer Use models
+      - Supports Anthropic Computer Use models
+    - **Separate model configurations**: Independent model settings for each SDK and agent provider (`claude_code_model`, `opencode_provider`, `opencode_model`, `browser_use_model`, `stagehand_model`).
+
+    ### Changed
+
+    - **Improved settings management**: Each SDK and agent provider now has its own independent model setting.
+    - **Backward compatibility**: Automatic migration of old config files to the new structure.
+
+    ### Fixed
+
+    - Fixed OpenCode model settings being overridden by Claude SDK model settings.
+  </Accordion>
+
+  <Accordion title="0.2.0 — 2025-12-25">
+    ### Added
+
+    - **OpenCode SDK support**: Native integration with OpenCode SDK.
+    - **Agent mode**: Fully automated browser interaction using AI agents (browser-use) with support for Browser-Use LLM, OpenAI, and Google models.
+    - **Multi-provider agent support**: Configure agent models via settings with automatic API key detection.
+
+    ### Changed
+
+    - Improved UX with better CLI interactions and mode cycling.
+    - Enhanced settings management for model, agent model, SDK, and output directory.
+  </Accordion>
+
+  <Accordion title="0.1.0 — 2025-12-22">
+    ### Added
+
+    - Initial release.
+    - Browser automation with Playwright and stealth mode.
+    - HAR recording and capture.
+    - AI-powered API client generation using Claude.
+    - Interactive CLI with manual and engineer modes.
+    - Session history and cost tracking.
+    - Production-ready code generation with type hints and documentation.
+  </Accordion>
+
+</AccordionGroup>

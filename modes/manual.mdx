@@ -1,0 +1,102 @@
+---
+title: "Manual mode"
+description: "Full pipeline — browse, capture HAR, and generate a production-ready API client."
+---
+
+In manual mode you control the browser yourself. The tool opens a Chromium window with HAR recording active, you navigate the site and trigger the API calls you need, then close the browser. Claude analyzes the captured traffic and generates a complete API client.
+
+## How it works
+
+<Steps>
+  <Step title="Enter a task prompt">
+    Start the CLI and make sure you are in manual mode. Press **Shift+Tab** to cycle modes until `[manual]` appears in the prompt, or launch directly:
+
+    ```bash
+    reverse-api-engineer manual --model claude-sonnet-4-6
+    ```
+
+    Type a plain-language description of what you want to capture:
+
+    ```
+    [manual] > fetch all apple jobs from their careers page
+    ```
+  </Step>
+
+  <Step title="Provide a starting URL (optional)">
+    After entering your prompt, the CLI asks for a starting URL:
+
+    ```
+     > url  (Enter for none)
+    ```
+
+    Press Enter to open a blank browser, or paste a URL to navigate there automatically.
+  </Step>
+
+  <Step title="Browse and interact">
+    A Chromium window opens with stealth mode and HAR recording enabled. Navigate to the site, trigger the API calls you want (scroll, search, filter, click), and interact as you normally would.
+
+    All network traffic is recorded in the background — you do not need to do anything special.
+  </Step>
+
+  <Step title="Close the browser">
+    When you have captured everything you need, close the browser window. The HAR file is saved automatically and AI generation starts immediately.
+  </Step>
+
+  <Step title="Review the generated files">
+    Claude analyzes the HAR, identifies endpoints and authentication patterns, and writes the API client. When generation completes, the files appear in two locations:
+
+    - `~/.reverse-api/runs/scripts/{run_id}/` — permanent storage indexed by run ID
+    - `./scripts/{descriptive_name}/` — local copy with a human-readable folder name
+
+    ```
+    scripts/apple_jobs_api/
+    ├── api_client.py       # Full API implementation
+    ├── README.md           # Endpoint documentation
+    └── example_usage.py    # Runnable usage examples
+    ```
+  </Step>
+</Steps>
+
+## Output files
+
+<Columns cols={3}>
+  <Card title="api_client.py" icon="file-code">
+    Full API implementation with authentication handling, type hints, docstrings, and error handling.
+  </Card>
+  <Card title="README.md" icon="book">
+    Documentation for the generated client: endpoint descriptions, parameters, and usage notes.
+  </Card>
+  <Card title="example_usage.py" icon="play">
+    Runnable examples that demonstrate the main functions of the generated client.
+  </Card>
+</Columns>
+
+## Tags
+
+Prepend a tag to your prompt to change how manual mode behaves.
+
+| Tag | Effect | Example |
+|-----|--------|---------|
+| `@record-only` | Record the HAR file only — skip AI generation entirely. | `@record-only navigate checkout flow` |
+| `@codegen` | Record browser actions and generate a reusable Playwright automation script instead of an API client. | `@codegen navigate to google` |
+
+<Tip>
+  Use `@record-only` when you want to capture traffic now and run engineer mode later with a different prompt. The run ID is printed at the end of the session.
+</Tip>
+
+## When to use manual mode
+
+<Columns cols={2}>
+  <Card title="Login flows" icon="lock">
+    Manual mode is ideal when authentication requires CAPTCHA, MFA, or other interactive challenges that an autonomous agent cannot handle.
+  </Card>
+  <Card title="Complex interactions" icon="hand-pointer">
+    Use manual mode when the sequence of actions matters — multi-step wizards, drag-and-drop, or interactions that require human judgment.
+  </Card>
+  <Card title="Precise control" icon="sliders">
+    Choose manual mode when you want to select exactly which pages and API calls to include in the capture.
+  </Card>
+  <Card title="Exploration" icon="compass">
+    Browse freely to discover undocumented endpoints before writing automation.
+  </Card>
+</Columns>

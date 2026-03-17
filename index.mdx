@@ -1,97 +1,155 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Reverse API Engineer"
+description: "Capture browser traffic and automatically generate production-ready API clients using Claude AI. No more manual reverse engineering."
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get from install to your first generated API client in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Usage Modes" icon="terminal" href="/modes/manual">
+    Learn the four modes: Manual, Engineer, Agent, and Collector.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Configure models, SDKs, output languages, and agent providers.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Claude Code Plugin" icon="puzzle-piece" href="/integrations/claude-code-plugin">
+    Use reverse-api-engineer directly inside Claude Code.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Reverse API Engineer?
 
-Everything you need to create world-class documentation.
+Reverse API Engineer is a CLI tool that captures browser traffic in HAR (HTTP Archive) format and uses Claude AI to automatically generate production-ready API clients. Browse any website, close the browser, and get clean, typed, documented Python (or JavaScript/TypeScript) code that replicates those API calls.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+```bash
+# Install
+uv tool install reverse-api-engineer
 
-## Need inspiration?
+# Launch
+reverse-api-engineer
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+# In the CLI prompt:
+> fetch all apple jobs from their careers page
+# Browser opens → navigate → close → AI generates api_client.py
+```
+
+## How it works
+
+<Steps>
+  <Step title="Capture traffic">
+    A Playwright browser launches with HAR recording enabled and stealth mode active. You browse normally — or let an AI agent browse for you.
+  </Step>
+  <Step title="Close the browser">
+    When you're done interacting with the site, close the browser. All network traffic has been recorded to a `.har` file.
+  </Step>
+  <Step title="AI generates client code">
+    Claude analyzes the HAR file, identifies API endpoints, authentication patterns, and data structures, then writes a production-ready API client.
+  </Step>
+  <Step title="Use your generated client">
+    The generated scripts appear in `./scripts/{name}/` with an `api_client.py` (or `.js`/`.ts`), `README.md`, and example usage file.
+  </Step>
+</Steps>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Four operation modes" icon="sliders">
+    **Manual** for full control, **Engineer** to re-process captures, **Agent** for autonomous browsing, and **Collector** for AI-powered data gathering.
+  </Card>
+  <Card title="Playwright with stealth" icon="shield">
+    Built on Playwright with `playwright-stealth` for realistic browser fingerprints that bypass most bot detection.
+  </Card>
+  <Card title="Multi-language output" icon="code">
+    Generate API clients in Python (default), JavaScript, or TypeScript. Switch with one setting change.
+  </Card>
+  <Card title="Claude Code plugin" icon="plug">
+    Use as a plugin inside Claude Code with `/reverse-api-engineer:manual`, `:engineer`, and `:agent` slash commands.
+  </Card>
+  <Card title="Cost tracking" icon="chart-line">
+    Detailed token usage and cost estimation per run, with cache hit tracking and support for 100+ models via LiteLLM.
+  </Card>
+  <Card title="Tag system" icon="tag">
+    Fine-grained control with `@record-only`, `@codegen`, `@docs`, and `@id` tags directly in the prompt.
+  </Card>
+  <Card title="Session history" icon="clock-rotate-left">
+    Every run is saved locally with full message logs, costs, and the generated scripts. View with `/history`.
+  </Card>
+  <Card title="Chrome extension" icon="chrome">
+    Browser-native HAR capture via a Chrome extension with a side panel UI (work in progress).
+  </Card>
+</CardGroup>
+
+## Installation
+
+<CodeGroup>
+```bash uv (recommended)
+uv tool install reverse-api-engineer
+playwright install chromium
+```
+
+```bash pip
+pip install reverse-api-engineer
+playwright install chromium
+```
+
+```bash With agent mode
+uv tool install 'reverse-api-engineer[agent]' \
+  --with 'browser-use @ git+https://github.com/browser-use/browser-use.git@49a345fb19e9f12befc5cc1658e0033873892455'
+playwright install chromium
+```
+</CodeGroup>
+
+<Note>
+Python 3.11 or higher is required. See the [Installation guide](/installation) for all options including pricing extras and agent mode dependencies.
+</Note>
+
+## Example output
+
+After capturing traffic from a job board, Reverse API Engineer produces:
+
+```python api_client.py
+import httpx
+from typing import Optional
+
+class AppleJobsAPI:
+    """API client for Apple Jobs (jobs.apple.com)."""
+
+    BASE_URL = "https://jobs.apple.com/api/role/search"
+
+    def __init__(self, session: Optional[httpx.Client] = None):
+        self.session = session or httpx.Client()
+
+    def search_jobs(
+        self,
+        query: str,
+        location: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
+        """Search Apple job listings.
+
+        Args:
+            query: Search query string
+            location: Filter by location name
+            page: Page number (1-indexed)
+            page_size: Results per page
+
+        Returns:
+            Dict with searchResults list and totalRecords count
+        """
+        payload = {
+            "query": query,
+            "filters": {"range": {"START": page - 1, "END": page_size}},
+        }
+        if location:
+            payload["filters"]["locations"] = [{"type": "CITY", "code": location}]
+
+        response = self.session.post(self.BASE_URL, json=payload)
+        response.raise_for_status()
+        return response.json()
+```
+
+<Tip>
+All generated clients include type hints, docstrings, error handling, and authentication support out of the box.
+</Tip>

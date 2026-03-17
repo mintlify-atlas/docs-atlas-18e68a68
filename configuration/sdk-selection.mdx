@@ -1,0 +1,81 @@
+---
+title: "SDK selection"
+description: "Choose between the Claude Agent SDK and OpenCode SDK for engineering sessions."
+---
+
+reverse-api-engineer can use two different SDKs to run engineering sessions. The SDK controls how the tool communicates with the AI model during HAR analysis and code generation.
+
+<Tabs>
+  <Tab title="Claude SDK (default)">
+    The Claude SDK uses `claude-agent-sdk` for a direct, streaming connection to the Anthropic Claude API.
+
+    **Config value:** `sdk: "claude"`
+
+    **Model config key:** `claude_code_model`
+
+    **Required API key:**
+
+    ```bash
+    export ANTHROPIC_API_KEY="your-api-key"
+    ```
+
+    **Characteristics:**
+    - Stream-based responses — output appears in the terminal as it is generated.
+    - Persistent connection to Claude for the duration of the session.
+    - Uses the model set in `claude_code_model` (default: `claude-sonnet-4-6`).
+    - Works with manual, engineer, agent, and collector modes.
+
+    This is the recommended SDK for most users.
+  </Tab>
+
+  <Tab title="OpenCode SDK">
+    The OpenCode SDK communicates with a locally running OpenCode server over HTTP. reverse-api-engineer sends requests to `http://127.0.0.1:4096`.
+
+    **Config value:** `sdk: "opencode"`
+
+    **Model config keys:** `opencode_model` and `opencode_provider`
+
+    **Prerequisites:**
+
+    You must have [OpenCode](https://opencode.ai) installed and running locally before starting an engineering session.
+
+    **Characteristics:**
+    - Supports a wider range of models — anything OpenCode supports, including Gemini and other providers.
+    - Requires a running OpenCode process on your machine.
+    - Model is specified as a value understood by OpenCode (see [models.dev](https://models.dev)).
+
+    **Debugging:**
+
+    Set `OPENCODE_DEBUG=1` to enable detailed logs:
+
+    ```bash
+    export OPENCODE_DEBUG=1
+    reverse-api-engineer
+    ```
+  </Tab>
+</Tabs>
+
+## How to change the SDK
+
+Type `/settings` in the CLI and select **"SDK"**, or edit `config.json` directly:
+
+```json config.json
+{
+    "sdk": "opencode",
+    "opencode_model": "claude-opus-4-6",
+    "opencode_provider": "anthropic"
+}
+```
+
+To switch back to the Claude SDK:
+
+```json config.json
+{
+    "sdk": "claude",
+    "claude_code_model": "claude-sonnet-4-6"
+}
+```
+
+<Note>
+  The `sdk` setting controls engineering sessions only. The agent provider (set separately via `agent_provider`) uses its own model config keys regardless of SDK.
+</Note>

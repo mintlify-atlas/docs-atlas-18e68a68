@@ -1,0 +1,139 @@
+---
+title: "Architecture"
+description: "Internal architecture of reverse-api-engineer — components, data flow, and design patterns"
+---
+
+## Overview
+
+Reverse API Engineer is a CLI tool that captures browser traffic (HAR files) and uses AI to automatically generate production-ready Python API clients. It supports three primary modes: manual browser capture, autonomous AI agent browsing, and re-engineering from previous captures.
+
+## Dual-SDK pattern
+
+The core of the project is a **dual-SDK architecture** controlled by the `sdk` field in `config.json`:
+
+- **Claude SDK** (`engineer.py` → `ClaudeEngineer`): Uses `claude-agent-sdk` for direct Claude API integration
+- **OpenCode SDK** (`opencode_engineer.py` → `OpenCodeEngineer`): Uses httpx to communicate with a local OpenCode server at `http://127.0.0.1:4096`
+
+Both implementations inherit from `BaseEngineer` — an abstract base class that defines the common interface and shared prompt-building logic. SDK selection is determined at runtime from the `sdk` field in config.
+
+## Key components
+
+| File | Role |
+|---|---|
+| `cli.py` | Main entry point — mode cycling (manual / engineer / agent / collector), slash commands, interactive prompts |
+| `browser.py` | Playwright-based HAR recording with stealth mode. `ManualBrowser` for user-controlled sessions; `run_agent_browser()` for autonomous browsing |
+| `base_engineer.py` | Abstract base class defining the common interface and shared prompt-building logic |
+| `engineer.py` | `ClaudeEngineer` — Claude SDK implementation |
+| `opencode_engineer.py` | `OpenCodeEngineer` — OpenCode SDK implementation |
+| `copilot_engineer.py` | `CopilotEngineer` — GitHub Copilot SDK implementation |
+| `config.py` | JSON-based `ConfigManager` stored at `~/.reverse-api/config.json` |
+| `session.py` | Tracks run history with costs and metadata |
+| `messages.py` | Persists full conversation logs per run (JSONL format) |
+| `pricing.py` | Model pricing database with three-tier fallback |
+| `tui.py` | Rich-based terminal UI |
+| `opencode_ui.py` | OpenCode-specific UI extensions |
+| `collector.py` | Collector mode — AI-powered web data collection |
+| `sync.py` | Real-time file sync via `FileSyncWatcher` |
+| `utils.py` | Path helpers, run ID generation, prompt parsing |
+| `playwright_codegen.py` | Playwright codegen for the `@codegen` tag |
+| `action_recorder.py` | Records browser actions for codegen |
+| `auto_engineer.py` | Auto mode agent engineering |
+| `native_host.py` | Chrome extension native messaging host |
+
+## Data flow
+
+```
+Browser (browser.py)
+  └── Captures network traffic
+        └── HAR saved to ~/.reverse-api/runs/har/{run_id}/
+
+Engineer (engineer.py / opencode_engineer.py / copilot_engineer.py)
+  └── Reads HAR, calls LLM
+        └── Generates Python/JS/TS API client scripts
+              ├── Permanent: ~/.reverse-api/runs/scripts/{run_id}/
+              └── Local copy: ./scripts/{descriptive_name}/
+```
+
+1. The browser captures HAR traffic and saves it to `~/.reverse-api/runs/har/{run_id}/`
+2. The engineer reads the HAR, sends it to the LLM, and streams back generated scripts
+3. Scripts are written to both permanent storage and a local `./scripts/` directory with a human-readable name
+
+## Data storage structure
+
+```
+~/.reverse-api/
+├── config.json                    # User configuration
+├── history.json                   # Run history with costs
+└── runs/
+    ├── har/{run_id}/              # Captured network traffic
+    ├── scripts/{run_id}/          # Generated API clients
+    ├── docs/{run_id}/             # Generated OpenAPI specs
+    └── messages/{run_id}.jsonl    # LLM conversation logs
+```
+
+## Configuration system
+
+Configuration lives at `~/.reverse-api/config.json`. The `ConfigManager` in `config.py` handles reading, writing, and backward-compatible migration of renamed keys.
+
+```json
+{
+  "claude_code_model": "claude-sonnet-4-6",
+  "opencode_provider": "anthropic",
+  "opencode_model": "claude-sonnet-4-6",
+  "sdk": "claude",
+  "agent_provider": "browser-use",
+  "browser_use_model": "bu-llm",
+  "stagehand_model": "openai/computer-use-preview-2025-03-11",
+  "output_dir": null
+}
+```
+
+## Pricing system
+
+Cost tracking uses a three-tier fallback:
+
+1. **Local pricing** (`pricing.py`) — built-in prices for Claude and Gemini models (highest priority)
+2. **LiteLLM pricing** — extended coverage for 100+ models (requires `[pricing]` optional extra)
+3. **Default pricing** — falls back to Claude Sonnet 4.6 pricing when no match is found
+
+The pricing system tracks input tokens, output tokens, cache creation/read tokens, and reasoning tokens for thinking models.
+
+## Agent mode
+
+Agent mode supports three provider options:
+
+- **auto** (default): MCP-based browser automation with Claude Agent SDK. No additional installation required.
+- **browser-use**: Multi-model browser automation. Requires the `[agent]` extra and browser-use installed from a specific git commit that includes HAR recording support.
+- **stagehand**: Computer Use models from OpenAI and Anthropic.
+
+API keys are read from environment variables: `BROWSER_USE_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`.
+
+## Real-time sync
+
+`sync.py` implements `FileSyncWatcher`, which watches generated script directories and copies files to the local `./scripts/` folder as they are written. Sync uses debounced file watching (500ms default) to avoid redundant copies. When enabled, you can see output files appear in real time as the LLM generates them.
+
+## Source layout
+
+```
+src/reverse_api/
+├── cli.py               # Main entry point, mode cycling, slash commands
+├── base_engineer.py     # Abstract base for SDK implementations
+├── engineer.py          # Claude SDK implementation
+├── opencode_engineer.py # OpenCode SDK implementation
+├── copilot_engineer.py  # GitHub Copilot SDK implementation
+├── auto_engineer.py     # Auto mode agent engineering
+├── browser.py           # Playwright HAR capture + agent mode
+├── config.py            # Configuration manager
+├── session.py           # Run history and metadata
+├── messages.py          # Message persistence (JSONL)
+├── pricing.py           # Model pricing database
+├── tui.py               # Terminal UI (Rich-based)
+├── opencode_ui.py       # OpenCode-specific UI extensions
+├── collector.py         # Collector mode
+├── collector_ui.py      # Collector UI extensions
+├── sync.py              # Real-time file sync
+├── utils.py             # Path helpers, run ID generation
+├── playwright_codegen.py # Codegen for @codegen tag
+├── action_recorder.py   # Browser action recording
+└── native_host.py       # Chrome extension native host
+```

@@ -1,0 +1,98 @@
+---
+title: "Introduction"
+description: "What is reverse-api-engineer, who it's for, and how it works."
+---
+
+Reverse API Engineer is a CLI tool that captures browser traffic in HAR (HTTP Archive) format and uses Claude AI to automatically generate production-ready API clients. Browse any website—manually or with an autonomous AI agent—close the browser, and receive clean, typed, documented Python (or JavaScript/TypeScript) code that replicates those API calls.
+
+```bash
+# Install
+uv tool install reverse-api-engineer
+
+# Launch
+reverse-api-engineer
+
+# In the CLI prompt:
+> fetch all apple jobs from their careers page
+# Browser opens → navigate → close → AI generates api_client.py
+```
+
+## Core workflow
+
+<Steps>
+  <Step title="Browse">
+    A Playwright browser launches with HAR recording enabled and stealth mode active. You browse normally—or switch to agent mode and let AI browse autonomously.
+  </Step>
+  <Step title="HAR capture">
+    Every network request is recorded to an HTTP Archive file. When you close the browser, the capture is complete.
+  </Step>
+  <Step title="AI analysis">
+    Claude analyzes the HAR file, identifies API endpoints, authentication patterns, query parameters, and response shapes.
+  </Step>
+  <Step title="Generated code">
+    A production-ready API client appears in `./scripts/{name}/` alongside a README and example usage file.
+  </Step>
+</Steps>
+
+## Four operation modes
+
+<Columns cols={2}>
+  <Card title="Manual" icon="hand-pointer">
+    Full pipeline with manual browser interaction. You browse the site, close the browser, and AI generates the client. Best for exploratory reverse engineering.
+  </Card>
+  <Card title="Engineer" icon="wrench">
+    Re-run AI generation on a previous HAR capture without re-browsing. Useful for iterating on prompt or instructions.
+  </Card>
+  <Card title="Agent" icon="robot">
+    Fully autonomous mode. AI controls the browser, captures traffic, and generates the client—no manual interaction needed.
+  </Card>
+  <Card title="Collector" icon="database">
+    AI-powered data collection. Describe the data you want; the agent searches, collects, and exports to JSON and CSV.
+  </Card>
+</Columns>
+
+## What gets generated
+
+After a successful run, files are saved to two locations:
+
+- `~/.reverse-api/runs/scripts/{run_id}/` — permanent storage indexed by run ID
+- `./scripts/{descriptive_name}/` — local copy with a human-readable folder name
+
+Each output directory contains:
+
+<Columns cols={2}>
+  <Card title="api_client.py" icon="file-code">
+    Full API implementation with authentication handling, type hints, docstrings, and error handling.
+  </Card>
+  <Card title="README.md" icon="book">
+    Documentation for the generated client: endpoint descriptions, parameters, and usage notes.
+  </Card>
+  <Card title="example_usage.py" icon="play">
+    Runnable usage examples that demonstrate the main functions of the generated client.
+  </Card>
+  <Card title="Run history" icon="clock-rotate-left">
+    Every run is saved locally with full message logs, token usage, and cost data. View with `/history`.
+  </Card>
+</Columns>
+
+<Note>
+  The output language defaults to Python. You can switch to JavaScript or TypeScript in `/settings` → "Output Language".
+</Note>
+
+## Requirements
+
+- Python 3.11 or higher
+- Claude Code or OpenCode (for AI generation)
+- Playwright browsers installed (`playwright install chromium`)
+- `ANTHROPIC_API_KEY` set in your environment
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install with uv or pip, set up Playwright, and configure your API keys.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Go from install to your first generated API client in five minutes.
+  </Card>
+</Columns>

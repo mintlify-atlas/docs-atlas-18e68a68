@@ -1,0 +1,189 @@
+---
+title: "Data collection with collector mode"
+description: "Use collector mode to gather structured data and export to JSON and CSV."
+---
+
+Collector mode uses an AI agent to search the web and assemble structured datasets from natural language prompts. Unlike the other modes, it does not capture HAR files or generate API clients — it writes data directly to `items.json` and `items.csv`.
+
+This page shows two concrete examples: collecting information about JavaScript frameworks, and collecting job postings.
+
+## Example 1: JavaScript frameworks
+
+<Steps>
+  <Step title="Switch to collector mode">
+    Launch the CLI and press **Shift+Tab** until `[collector]` appears in the prompt:
+
+    ```bash
+    reverse-api-engineer
+    ```
+
+    ```
+    [collector] >
+    ```
+  </Step>
+
+  <Step title="Enter the collection prompt">
+    Describe the data you want. Be specific about fields you need:
+
+    ```
+    [collector] > Find 3 JS frameworks with their GitHub stars, license, and weekly downloads
+    ```
+  </Step>
+
+  <Step title="Agent collects the data">
+    The agent uses `WebSearch` and `WebFetch` to locate sources, then writes each item as it finds it. You will see progress in the terminal as records are saved.
+
+    When the agent finishes, the output files appear in:
+
+    - `./collected/js_frameworks/` — local copy
+    - `~/.reverse-api/runs/collected/js_frameworks/` — permanent storage
+  </Step>
+
+  <Step title="Review the output files">
+    The output directory contains three files:
+
+    ```
+    ./collected/js_frameworks/
+    ├── items.json
+    ├── items.csv
+    └── README.md
+    ```
+  </Step>
+</Steps>
+
+### Output: `items.json`
+
+```json
+[
+  {
+    "name": "React",
+    "stars": 228000,
+    "license": "MIT",
+    "weekly_downloads": 25000000,
+    "source_url": "https://github.com/facebook/react"
+  },
+  {
+    "name": "Vue",
+    "stars": 208000,
+    "license": "MIT",
+    "weekly_downloads": 4800000,
+    "source_url": "https://github.com/vuejs/core"
+  },
+  {
+    "name": "Svelte",
+    "stars": 80000,
+    "license": "MIT",
+    "weekly_downloads": 1300000,
+    "source_url": "https://github.com/sveltejs/svelte"
+  }
+]
+```
+
+### Output: `items.csv`
+
+```
+name,stars,license,weekly_downloads,source_url
+React,228000,MIT,25000000,https://github.com/facebook/react
+Vue,208000,MIT,4800000,https://github.com/vuejs/core
+Svelte,80000,MIT,1300000,https://github.com/sveltejs/svelte
+```
+
+### Output: `README.md`
+
+The generated README includes the original prompt, the run ID, the item count, the sources the agent visited, and a schema listing every field and its type.
+
+---
+
+## Example 2: Tech job postings
+
+<Steps>
+  <Step title="Switch to collector mode">
+    Press **Shift+Tab** to reach `[collector]`:
+
+    ```
+    [collector] >
+    ```
+  </Step>
+
+  <Step title="Enter the collection prompt">
+    ```
+    [collector] > Collect 5 senior Python engineer job postings with company, location, salary range, and job URL
+    ```
+  </Step>
+
+  <Step title="Agent collects the data">
+    The agent searches job boards and company career pages. As each record is found, it is appended to `items.json` and `items.csv` in real time — if you stop early, you keep everything collected so far.
+  </Step>
+
+  <Step title="Review the output">
+    Output is saved to:
+
+    ```
+    ./collected/senior_python_engineer_jobs/
+    ├── items.json
+    ├── items.csv
+    └── README.md
+    ```
+  </Step>
+</Steps>
+
+### Output: `items.json`
+
+```json
+[
+  {
+    "company": "Stripe",
+    "title": "Senior Software Engineer, Python",
+    "location": "San Francisco, CA (Remote OK)",
+    "salary_range": "$180,000 – $270,000",
+    "url": "https://stripe.com/jobs/listing/senior-software-engineer-python/123456",
+    "source_url": "https://stripe.com/jobs"
+  },
+  {
+    "company": "Airbnb",
+    "title": "Staff Engineer, Backend (Python)",
+    "location": "San Francisco, CA",
+    "salary_range": "$220,000 – $300,000",
+    "url": "https://careers.airbnb.com/positions/5678901",
+    "source_url": "https://careers.airbnb.com"
+  }
+]
+```
+
+---
+
+## Comparing collector mode with manual mode
+
+<CardGroup cols={2}>
+  <Card title="Collector mode" icon="database">
+    Use collector mode when you want **structured data** — a list of items with consistent fields exported to JSON and CSV. The agent searches and browses on its own; you describe the schema through your prompt.
+
+    Best for: research datasets, competitive analysis, aggregating public listings.
+  </Card>
+  <Card title="Manual mode" icon="hand-pointer">
+    Use manual mode when you want a **reusable API client** — code you can call programmatically to query the same API again. You control the browser and the AI generates a Python class with typed methods.
+
+    Best for: building automation, integrations, and tools that need to call the API repeatedly.
+  </Card>
+</CardGroup>
+
+## Tips for effective prompts
+
+- **Name the fields you want.** The agent infers the schema from your prompt. "with GitHub stars, license, and weekly downloads" produces consistent columns.
+- **Set a count.** Saying "Find 5" or "Collect 10" keeps the run focused and fast.
+- **Specify sources if you have a preference.** "from npm" or "from LinkedIn" narrows where the agent looks.
+- **Ask for a URL field.** Including a `source_url` or `url` field in your prompt gives you a reference back to the original page.
+
+## Configuration
+
+Collector mode uses the `collector_model` setting. The default is `claude-sonnet-4-6`. Edit `~/.reverse-api/config.json` to change it:
+
+```json
+{
+  "collector_model": "claude-sonnet-4-6"
+}
+```
+
+<Note>
+  Collector mode requires `ANTHROPIC_API_KEY`. It always uses the Claude Agent SDK regardless of your SDK setting.
+</Note>

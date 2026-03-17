@@ -1,0 +1,122 @@
+---
+title: "Agent mode"
+description: "Fully autonomous AI browser navigation with automatic HAR capture and API client generation."
+---
+
+Agent mode is the default when you launch the CLI. An AI agent opens a browser, navigates to the target site, performs the task you described, and then Claude generates an API client from the captured traffic — all without manual interaction.
+
+<Note>
+  Since v0.4.5, agent mode does not prompt you for a URL. The agent navigates autonomously based on your prompt alone.
+</Note>
+
+## How to use it
+
+Agent mode is active by default when you launch `reverse-api-engineer`. Type a task description and press Enter:
+
+```
+[agent] > fetch all apple jobs from their careers page
+```
+
+The CLI confirms the agent will navigate on its own, then opens the browser and runs the task.
+
+## Agent providers
+
+Three providers are available. Switch between them in `/settings` → "Agent Provider".
+
+<Tabs>
+  <Tab title="auto (default)">
+    **auto** uses MCP-based browser automation with the Claude Agent SDK and OpenCode. It combines browser control and real-time reverse engineering in a single unified workflow.
+
+    No additional installation is required beyond the base package.
+
+    **Required API key:** `ANTHROPIC_API_KEY`
+
+    ```bash
+    export ANTHROPIC_API_KEY="your-api-key"
+    ```
+
+    This is the recommended provider for most use cases.
+  </Tab>
+
+  <Tab title="browser-use">
+    **browser-use** uses the [browser-use](https://github.com/browser-use/browser-use) library for browser automation. It supports multiple LLM backends.
+
+    Install with the `[agent]` extra and the specific git commit that includes HAR recording support:
+
+    ```bash
+    # With uv
+    uv tool install 'reverse-api-engineer[agent]' \
+      --with 'browser-use @ git+https://github.com/browser-use/browser-use.git@49a345fb19e9f12befc5cc1658e0033873892455'
+
+    # With pip
+    pip install 'reverse-api-engineer[agent]'
+    pip install 'git+https://github.com/browser-use/browser-use.git@49a345fb19e9f12befc5cc1658e0033873892455'
+    ```
+
+    **Required API key** (depends on model):
+
+    | Model | Environment variable |
+    |-------|---------------------|
+    | `bu-llm` (default) | `BROWSER_USE_API_KEY` |
+    | `openai/gpt-4`, `openai/gpt-3.5-turbo` | `OPENAI_API_KEY` |
+    | `google/gemini-pro`, `google/gemini-1.5-pro` | `GOOGLE_API_KEY` |
+
+    Change the model in `/settings` → "Browser-Use Model".
+  </Tab>
+
+  <Tab title="stagehand">
+    **stagehand** uses Computer Use models from OpenAI or Anthropic to control the browser.
+
+    Install with the `[agent]` extra:
+
+    ```bash
+    # With uv
+    uv tool install 'reverse-api-engineer[agent]'
+
+    # With pip
+    pip install 'reverse-api-engineer[agent]'
+    ```
+
+    **Required API key** (depends on model):
+
+    | Model | Environment variable |
+    |-------|---------------------|
+    | `openai/computer-use-preview-2025-03-11` | `OPENAI_API_KEY` |
+    | `anthropic/claude-sonnet-4-6-20260301` | `ANTHROPIC_API_KEY` |
+    | `anthropic/claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` |
+    | `anthropic/claude-opus-4-6-20260301` | `ANTHROPIC_API_KEY` |
+
+    Change the model in `/settings` → "Stagehand Model".
+  </Tab>
+</Tabs>
+
+## Tags
+
+| Tag | Effect | Example |
+|-----|--------|---------|
+| `@record-only <prompt>` | Capture the HAR file only — skip AI generation. A prompt is required in agent mode. | `@record-only navigate checkout flow` |
+
+<Tip>
+  Use `@record-only` to capture traffic for later analysis. The run ID is printed at the end of the session so you can re-process it with engineer mode.
+</Tip>
+
+## When to use agent mode
+
+<Columns cols={2}>
+  <Card title="Automated capture" icon="robot">
+    Let the AI handle navigation for repetitive or straightforward browsing tasks.
+  </Card>
+  <Card title="End-to-end pipeline" icon="circle-nodes">
+    Agent mode captures and generates in a single unattended workflow — no manual steps required.
+  </Card>
+  <Card title="Unattended runs" icon="clock">
+    Suitable for capturing APIs on sites with publicly accessible pages that do not require complex login flows.
+  </Card>
+  <Card title="Quick exploration" icon="compass">
+    Describe a task in plain language and let the agent discover the relevant API calls for you.
+  </Card>
+</Columns>
+
+<Warning>
+  Some websites use advanced bot-detection that may interrupt autonomous navigation. If agent mode fails, switch to manual mode to complete the capture yourself.
+</Warning>

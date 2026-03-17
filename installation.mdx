@@ -1,0 +1,132 @@
+---
+title: "Installation"
+description: "Install reverse-api-engineer using uv or pip."
+---
+
+<Note>
+  Python 3.11 or higher is required.
+</Note>
+
+## Install the package
+
+<Steps>
+  <Step title="Install reverse-api-engineer">
+    Choose your preferred package manager.
+
+    <CodeGroup>
+
+    ```bash uv (recommended)
+    uv tool install reverse-api-engineer
+    ```
+
+    ```bash pip
+    pip install reverse-api-engineer
+    ```
+
+    </CodeGroup>
+  </Step>
+
+  <Step title="Install Playwright browser">
+    Playwright must download the Chromium browser before the tool can capture traffic.
+
+    ```bash
+    playwright install chromium
+    ```
+  </Step>
+
+  <Step title="Set your API key">
+    The tool uses Claude AI for code generation. Set your Anthropic API key in your environment.
+
+    ```bash
+    export ANTHROPIC_API_KEY="your-api-key"
+    ```
+  </Step>
+
+  <Step title="Verify the install">
+    ```bash
+    reverse-api-engineer --version
+    ```
+  </Step>
+</Steps>
+
+## Agent mode (optional)
+
+Agent mode enables fully autonomous browser interaction. It requires the `[agent]` extra plus a specific git commit of `browser-use` that includes HAR recording support.
+
+<CodeGroup>
+
+```bash uv
+uv tool install 'reverse-api-engineer[agent]' \
+  --with 'browser-use @ git+https://github.com/browser-use/browser-use.git@49a345fb19e9f12befc5cc1658e0033873892455'
+```
+
+```bash pip
+pip install 'reverse-api-engineer[agent]'
+pip install 'git+https://github.com/browser-use/browser-use.git@49a345fb19e9f12befc5cc1658e0033873892455'
+```
+
+</CodeGroup>
+
+## Enhanced pricing support (optional)
+
+By default, reverse-api-engineer includes built-in pricing data for Claude and Gemini models. To extend cost tracking to 100+ additional models (OpenAI GPT, Mistral, DeepSeek, and more), install the `[pricing]` extra.
+
+<CodeGroup>
+
+```bash uv
+uv tool install 'reverse-api-engineer[pricing]'
+```
+
+```bash pip
+pip install 'reverse-api-engineer[pricing]'
+```
+
+</CodeGroup>
+
+The pricing system uses a three-tier fallback:
+
+1. **Local pricing** — built-in prices for Claude and Gemini models (highest priority)
+2. **LiteLLM pricing** — extended coverage for 100+ models (requires `[pricing]` extra)
+3. **Default fallback** — Claude Sonnet 4.6 pricing when no other data is available
+
+Cost tracking always works regardless of which extras are installed.
+
+## API keys
+
+Different agent providers require different API keys. Set the relevant keys before using those features.
+
+```bash
+export ANTHROPIC_API_KEY="your-api-key"   # Required for Claude models and default operation
+export BROWSER_USE_API_KEY="your-api-key" # For browser-use agent provider (bu-llm model)
+export OPENAI_API_KEY="your-api-key"      # For OpenAI models in browser-use or stagehand
+export GOOGLE_API_KEY="your-api-key"      # For Google Gemini models in browser-use
+```
+
+## Chrome extension (optional)
+
+The Chrome extension provides browser-native HAR capture via a side panel UI. It is a work in progress.
+
+<Steps>
+  <Step title="Build the extension">
+    ```bash
+    cd chrome-extension
+    npm install
+    npm run build
+    ```
+  </Step>
+  <Step title="Load in Chrome">
+    1. Go to `chrome://extensions/`
+    2. Enable **Developer mode** (top-right toggle)
+    3. Click **Load unpacked** and select the `chrome-extension/dist` directory
+    4. Copy the extension ID shown under the extension name
+  </Step>
+  <Step title="Install the native host">
+    ```bash
+    reverse-api-engineer install-host --extension-id YOUR_EXTENSION_ID
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  **macOS only:** After installing the native host, run `claude --version` once. If macOS shows a Gatekeeper security popup, go to **System Settings > Privacy & Security** and click **Allow Anyway**, then run the command again.
+</Warning>

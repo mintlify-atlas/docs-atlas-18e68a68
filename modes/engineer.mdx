@@ -1,0 +1,131 @@
+---
+title: "Engineer mode"
+description: "Re-process an existing HAR capture to generate a new or improved API client."
+---
+
+Engineer mode takes an existing run ID (or HAR file path) and re-runs AI generation without re-opening a browser. Use it to iterate on a capture you already have — refine the prompt, extract additional endpoints, generate documentation, or start fresh with different instructions.
+
+## How to use it
+
+Switch to engineer mode by pressing **Shift+Tab** until `[engineer]` appears in the prompt, or run directly from the command line:
+
+```bash
+reverse-api-engineer engineer <run_id>
+```
+
+In the interactive prompt, type a run ID or a tag command:
+
+```
+[engineer] > abc123
+```
+
+## Tags
+
+Engineer mode has a rich tag system that lets you target specific runs and control how generation behaves.
+
+### Switch context to a run
+
+```
+@id <run_id>
+```
+
+Loads a previous capture session and sets it as the active context. Subsequent prompts without an explicit `@id` will operate on this run.
+
+```
+[engineer] > @id abc123
+```
+
+You can also switch context by entering a run ID directly, without the `@id` prefix:
+
+```
+[engineer] > abc123
+```
+
+### Run engineer with specific instructions
+
+```
+@id <run_id> <prompt>
+```
+
+Re-processes the capture for the specified run with the instructions you provide. The AI takes into account any scripts already generated for that run.
+
+```
+[engineer] > @id abc123 extract user profile endpoints
+```
+
+### Start fresh
+
+```
+@id <run_id> --fresh <prompt>
+```
+
+Ignores any previously generated scripts for the run and generates new code from scratch. Useful when you want to try a completely different approach.
+
+```
+[engineer] > @id abc123 --fresh focus only on pagination
+```
+
+### Generate OpenAPI documentation
+
+```
+@docs
+```
+
+Generates an OpenAPI specification from the most recent run's captured traffic.
+
+```
+[engineer] > @docs
+```
+
+To target a specific run:
+
+```
+@id <run_id> @docs
+```
+
+```
+[engineer] > @id abc123 @docs
+```
+
+<Note>
+  The `@docs` command requires the target run to have a HAR file. If the run has no HAR file, engineer mode prints an error and suggests using `@id <run_id> @docs` with a run that has captured traffic.
+</Note>
+
+### Run on the current context
+
+If you have already switched to a run (or if there is a most-recent run available), you can enter instructions directly without any tag:
+
+```
+[engineer] > improve error handling
+```
+
+The AI applies your instructions additively on top of the existing scripts.
+
+## Tag reference summary
+
+| Syntax | Behavior |
+|--------|-----------|
+| `<run_id>` | Switch context to that run |
+| `@id <run_id>` | Same as above, explicit form |
+| `@id <run_id> <prompt>` | Re-run generation on a specific run with additive instructions |
+| `@id <run_id> --fresh <prompt>` | Re-run from scratch, ignoring previous scripts |
+| `@docs` | Generate OpenAPI docs for the latest run |
+| `@id <run_id> @docs` | Generate OpenAPI docs for a specific run |
+| `<prompt>` (no tag) | Apply instructions to the current context or latest run |
+
+## When to use engineer mode
+
+<Columns cols={2}>
+  <Card title="Iterate on captures" icon="arrows-rotate">
+    Re-run generation on an existing HAR without re-browsing the site.
+  </Card>
+  <Card title="Improve existing clients" icon="wrench">
+    Add better error handling, refine type hints, or adjust authentication logic.
+  </Card>
+  <Card title="Extract more endpoints" icon="magnifying-glass">
+    Revisit a large HAR file and ask the AI to focus on a specific API area you missed.
+  </Card>
+  <Card title="Generate documentation" icon="file-lines">
+    Produce an OpenAPI specification from captured traffic using `@docs`.
+  </Card>
+</Columns>

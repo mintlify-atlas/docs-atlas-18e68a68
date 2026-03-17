@@ -1,0 +1,171 @@
+---
+title: "Contributing"
+description: "Set up a development environment and contribute to reverse-api-engineer"
+---
+
+## Development setup
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/kalil0321/reverse-api-engineer.git
+    cd reverse-api-engineer
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    uv sync
+    playwright install chromium
+    ```
+
+    <Note>
+      Always run `uv sync` after pulling changes to keep dependencies up to date.
+    </Note>
+  </Step>
+
+  <Step title="Run locally">
+    ```bash
+    uv run reverse-api-engineer
+    ```
+  </Step>
+</Steps>
+
+## Building
+
+The `clean_build.sh` script removes all caches and artifacts before building, which prevents stale bytecode from leaking into distributions.
+
+```bash
+./scripts/clean_build.sh
+```
+
+To build manually without cleaning:
+
+```bash
+uv build
+```
+
+## Testing the built package
+
+After building, verify the package works correctly in an isolated environment:
+
+<CodeGroup>
+
+```bash As installed package
+python -m venv test_env
+test_env/bin/pip install dist/*.whl
+test_env/bin/reverse-api-engineer
+```
+
+```bash With uv tool
+uv tool install .
+reverse-api-engineer
+```
+
+</CodeGroup>
+
+## Linting and type checking
+
+<CodeGroup>
+
+```bash All checks
+./scripts/lint.sh
+```
+
+```bash Individual tools
+uv run ruff check src   # Linter
+uv run ruff format src  # Formatter
+uv run mypy src         # Static analysis
+```
+
+</CodeGroup>
+
+The project enforces PEP 8 via Ruff and full static analysis via mypy with strict settings. Use type hints throughout and add docstrings to public functions and classes.
+
+## Code style conventions
+
+- **Type hints**: Use throughout (`from typing import Optional, Dict, Any`)
+- **Async/await**: Engineers use async for LLM streaming
+- **Error handling**: Wrap external calls in try-except with user-friendly messages
+- **UI consistency**: Use Rich for all terminal output — no bare `print()` statements
+- **Config migration**: `config.py` includes backward-compatibility logic for renamed keys
+
+## Pull request process
+
+1. Create a feature branch from `main`
+2. Make your changes
+3. Test locally with `uv run reverse-api-engineer`
+4. Run `./scripts/lint.sh` and fix any issues
+5. Submit a pull request with a clear description
+
+For bug reports, use the GitHub issue tracker and include steps to reproduce, your OS and Python version, and any relevant error messages or logs.
+
+## Common tasks
+
+### Adding a new model
+
+1. Add pricing to `pricing.py` `MODEL_PRICING` dict (if the model is not already covered by LiteLLM)
+2. Update model choices in `tui.py` `get_model_choices()` if needed
+3. Update the README model list
+
+### Adding a new agent provider
+
+1. Add provider logic to `browser.py` `run_agent_browser()`
+2. Add config fields to `config.py` `DEFAULT_CONFIG`
+3. Update the settings menu in `cli.py`
+4. Document the provider in README
+
+### Debugging
+
+<CodeGroup>
+
+```bash OpenCode detailed logs
+OPENCODE_DEBUG=1 uv run reverse-api-engineer
+```
+
+```bash CLI stderr output
+DEBUG=1 uv run reverse-api-engineer
+```
+
+</CodeGroup>
+
+All LLM interactions are saved to `~/.reverse-api/runs/messages/{run_id}.jsonl` for post-hoc inspection.
+
+## Release process
+
+<Warning>
+  Version is defined **only** in `pyproject.toml`. Never edit `src/reverse_api/__init__.py` for versioning — it reads from package metadata via `importlib.metadata`.
+</Warning>
+
+<Steps>
+  <Step title="Update the version">
+    Edit `version` in `pyproject.toml`. This is the single source of truth.
+  </Step>
+
+  <Step title="Update the changelog">
+    Add a new entry to `CHANGELOG.md` following the Keep a Changelog format.
+  </Step>
+
+  <Step title="Build the package">
+    ```bash
+    ./scripts/clean_build.sh
+    ```
+  </Step>
+
+  <Step title="Commit and tag">
+    ```bash
+    git add pyproject.toml CHANGELOG.md
+    git commit -m "release: vX.Y.Z - description"
+    git tag vX.Y.Z
+    git push origin main
+    git push origin vX.Y.Z
+    ```
+  </Step>
+
+  <Step title="Publish to PyPI">
+    ```bash
+    source .env  # contains UV_PUBLISH_TOKEN or PYPI_TOKEN
+    uv publish
+    ```
+  </Step>
+</Steps>

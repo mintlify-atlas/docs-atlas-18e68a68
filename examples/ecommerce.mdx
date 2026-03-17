@@ -1,0 +1,380 @@
+---
+title: "E-commerce product API"
+description: "Capture a product catalog and search API from a retail site using agent mode."
+---
+
+This walkthrough captures the IKEA product catalog API using agent mode. The agent browses the site autonomously, captures traffic, and generates a client that covers product search, product details, and shopping cart management.
+
+## End-to-end walkthrough
+
+<Steps>
+  <Step title="Launch the CLI">
+    Agent mode is the default when you start the CLI:
+
+    ```bash
+    reverse-api-engineer
+    ```
+
+    The mode indicator shows `[agent]`. If it shows a different mode, press **Shift+Tab** to cycle back to agent.
+  </Step>
+
+  <Step title="Enter the task prompt">
+    Describe what you want to capture in plain language:
+
+    ```
+    [agent] > find product listings and pricing data from IKEA
+    ```
+
+    The CLI confirms that the agent will navigate autonomously and opens the browser.
+  </Step>
+
+  <Step title="Agent runs autonomously">
+    The agent performs a sequence of actions without your input:
+
+    - Opens `https://www.ikea.com`
+    - Searches for several product categories (chairs, desks, lamps)
+    - Clicks into individual product pages to capture detail endpoints
+    - Adds a product to cart to capture cart API calls
+    - Records all network traffic throughout
+
+    You can watch the browser window while this happens. The terminal prints each action the agent takes.
+  </Step>
+
+  <Step title="Review the generated files">
+    When the agent closes the browser, Claude analyzes the HAR and writes the client. Output appears in:
+
+    - `./scripts/ikea_product_api/` — local copy
+    - `~/.reverse-api/runs/scripts/{run_id}/` — permanent storage
+
+    ```
+    ./scripts/ikea_product_api/
+    ├── api_client.py
+    ├── README.md
+    └── example_usage.py
+    ```
+  </Step>
+</Steps>
+
+## Generated output
+
+The client below is drawn from a real IKEA capture.
+
+<CodeGroup>
+
+```python api_client.py
+"""
+IKEA API Client — Production Ready
+
+Provides access to:
+- Product search
+- Product details
+- Shopping cart management
+- Guest authentication
+- Price calculations
+"""
+
+import requests
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+
+@dataclass
+class IKEAConfig:
+    """Configuration for the IKEA API client."""
+    country: str = "us"
+    language: str = "en"
+    base_url: str = "https://www.ikea.com"
+    search_api: str = "https://sik.search.blue.cdtapps.com"
+    web_api: str = "https://web-api.ikea.com"
+    cart_api: str = "https://prod.cart.caas.selling.ingka.com"
+    auth_api: str = "https://api.ingka.ikea.com"
+
+
+class IKEAAPIClient:
+    """
+    IKEA API client for e-commerce operations.
+
+    Handles guest authentication, product search, cart management,
+    and price calculations.
+
+    Example:
+        client = IKEAAPIClient()
+        results = client.search_products("chair", limit=10)
+        product = client.get_product_details("59305928")
+    """
+
+    def __init__(self, country: str = "us", language: str = "en"):
+        self.config = IKEAConfig(country=country, language=language)
+        self.session = requests.Session()
+        self.access_token: Optional[str] = None
+        self.token_expires_at: Optional[datetime] = None
+
+        self.session.headers.update({
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/143.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json",
+            "Accept-Language": f"{language}-{country.upper()},{language};q=0.9",
+        })
+
+    def _ensure_authenticated(self) -> None:
+        """Obtain a guest token if one is not already cached or has expired."""
+        if self.access_token and self.token_expires_at:
+            if datetime.now() < self.token_expires_at:
+                return
+        self._authenticate_guest()
+
+    def _authenticate_guest(self) -> None:
+        """Request a guest JWT from the IKEA auth API.
+
+        The token is valid for 720 hours and is refreshed automatically
+        when it expires.
+        """
+        url = f"{self.config.auth_api}/guest/token"
+        headers = {
+            "accept": "application/json;version=2",
+            "content-type": "application/json",
+            "x-client-id": "b477b9e4-b836-40fb-842f-43db89dd3c52",
+            "origin": "https://www.ikea.com",
+            "referer": "https://www.ikea.com/",
+        }
+        response = self.session.post(
+            url,
+            json={"retailUnit": self.config.country},
+            headers=headers,
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+        self.access_token = data["access_token"]
+        expires_hours = int(data["expires_in"].replace("h", ""))
+        self.token_expires_at = datetime.now() + timedelta(hours=expires_hours)
+        self.session.headers.update({"Authorization": f"Bearer {self.access_token}"})
+
+    def search_products(
+        self,
+        query: str,
+        limit: Optional[int] = None,
+        sort: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Search the IKEA product catalog.
+
+        Args:
+            query: Search string (e.g. "chair", "desk lamp").
+            limit: Maximum number of products to return per page.
+            sort: Sort order. Options: "RELEVANCE", "PRICE_LOW_TO_HIGH",
+                  "PRICE_HIGH_TO_LOW".
+
+        Returns:
+            Raw API response dict. Products are in
+            results[0]["items"] when component == "PRIMARY_AREA".
+        """
+        self._ensure_authenticated()
+
+        url = f"{self.config.search_api}/{self.config.country}/{self.config.language}/search"
+        window_size = limit or 24
+
+        payload: Dict[str, Any] = {
+            "searchParameters": {"input": query, "type": "QUERY"},
+            "allowAutocorrect": True,
+            "isUserLoggedIn": False,
+            "components": [
+                {
+                    "component": "PRIMARY_AREA",
+                    "columns": 4,
+                    "types": {
+                        "main": "PRODUCT",
+                        "breakouts": ["PLANNER", "CATEGORY", "CONTENT"],
+                    },
+                    "window": {"size": window_size, "offset": 0},
+                    "allVariants": False,
+                    "forceFilterCalculation": True,
+                }
+            ],
+        }
+
+        if sort:
+            payload["searchParameters"]["sort"] = sort
+
+        response = self.session.post(
+            url, params={"c": "sr", "v": "20250507"}, json=payload, timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_product_details(self, item_no: str) -> Dict[str, Any]:
+        """Fetch details for a specific product by item number.
+
+        Args:
+            item_no: IKEA item number, with or without the "S" prefix
+                     (e.g. "59305928" or "S59305928").
+
+        Returns:
+            Product dict with name, salesPrice, typeName, and other fields.
+
+        Raises:
+            Exception: If the product is not found.
+        """
+        if item_no.startswith("S"):
+            item_no = item_no[1:]
+
+        results = self.search_products(item_no, limit=5)
+        for result in results.get("results", []):
+            if result.get("component") == "PRIMARY_AREA":
+                for item in result.get("items", []):
+                    product = item.get("product", {})
+                    if product.get("itemNo") == item_no:
+                        return product
+                items = result.get("items", [])
+                if items:
+                    return items[0].get("product", {})
+
+        raise Exception(f"Product {item_no} not found")
+
+    def add_to_cart(self, item_no: str, quantity: int = 1) -> Dict[str, Any]:
+        """Add a product to the shopping cart.
+
+        Args:
+            item_no: IKEA item number (e.g. "59305928").
+            quantity: Number of units to add.
+
+        Returns:
+            Updated cart dict.
+        """
+        self._ensure_authenticated()
+        url = f"{self.config.cart_api}/api/v1/{self.config.country}/items"
+        payload = {
+            "items": [{"itemNo": item_no, "quantity": float(quantity), "itemType": "SPR"}],
+            "languageCode": self.config.language.upper(),
+        }
+        headers = {"x-consumer-name": "Web Cart", "accept": "*/*"}
+        response = self.session.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        return response.json() or {}
+
+    def get_cart(self) -> Dict[str, Any]:
+        """Retrieve the current shopping cart.
+
+        Returns:
+            Cart dict including items, quantities, and total price.
+        """
+        self._ensure_authenticated()
+        url = f"{self.config.cart_api}/api/v1/{self.config.country}"
+        params = {
+            "fetchItemInfo": "true",
+            "fetchPrice": "true",
+            "shoppingProfile": "ONLINE",
+            "group": "DEFAULT",
+        }
+        headers = {"x-consumer-name": "Web Cart", "accept": "*/*"}
+        response = self.session.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        return response.json()
+
+    def get_discounts(self, item_numbers: List[str]) -> Dict[str, Any]:
+        """Check for available discounts on a list of products.
+
+        Args:
+            item_numbers: List of IKEA item numbers.
+
+        Returns:
+            Discount dict. Discount amounts are in discounts[n]["amount"].
+        """
+        self._ensure_authenticated()
+        url = f"{self.config.web_api}/wdm/api/discounts/get"
+        payload = {"itemNos": item_numbers, "retailUnit": self.config.country}
+        response = self.session.post(url, json=payload, timeout=10)
+        response.raise_for_status()
+        return response.json()
+```
+
+```python example_usage.py
+#!/usr/bin/env python3
+"""Usage examples for the IKEA API client."""
+
+from api_client import IKEAAPIClient
+
+client = IKEAAPIClient(country="us", language="en")
+
+# --- Example 1: search for products ---
+print("=== Product search: 'chair' ===")
+results = client.search_products("chair", limit=10)
+
+products = []
+for result in results.get("results", []):
+    if result.get("component") == "PRIMARY_AREA":
+        products = result.get("items", [])
+        break
+
+for item in products[:3]:
+    p = item.get("product", {})
+    print(f"  {p.get('name')} ({p.get('typeName')}) — ${p.get('salesPrice', {}).get('numeral')}")
+
+# --- Example 2: product details ---
+if products:
+    item_no = products[0].get("product", {}).get("itemNo")
+    if item_no:
+        product = client.get_product_details(item_no)
+        print(f"\nDetails for {item_no}:")
+        print(f"  Name:  {product.get('name')}")
+        print(f"  Type:  {product.get('typeName')}")
+        print(f"  Price: ${product.get('salesPrice', {}).get('numeral')}")
+
+# --- Example 3: search with sort ---
+print("\n=== Sofas, lowest price first ===")
+sorted_results = client.search_products("sofa", sort="PRICE_LOW_TO_HIGH", limit=5)
+for result in sorted_results.get("results", []):
+    if result.get("component") == "PRIMARY_AREA":
+        for item in result.get("items", [])[:3]:
+            p = item.get("product", {})
+            print(f"  {p.get('name')} — ${p.get('salesPrice', {}).get('numeral')}")
+        break
+
+# --- Example 4: check discounts ---
+item_nos = ["59305928", "80153800"]
+discounts = client.get_discounts(item_nos)
+for discount in discounts.get("discounts", []):
+    print(f"Discount on {discount['itemNo']}: {discount['amount']}")
+```
+
+</CodeGroup>
+
+## How authentication works
+
+IKEA uses JWT-based guest authentication. The generated client handles this automatically:
+
+1. On the first API call, `_ensure_authenticated()` requests a guest token from `api.ingka.ikea.com/guest/token`.
+2. The server returns a JWT valid for 720 hours (30 days).
+3. The token is included in all subsequent requests as `Authorization: Bearer {token}`.
+4. The token is refreshed automatically when it expires.
+
+No username or password is required for search, product details, or cart operations.
+
+## Generating an OpenAPI spec
+
+Switch to engineer mode and use the `@docs` tag to generate an OpenAPI specification from the same capture:
+
+```
+[engineer] > @id <run_id> @docs
+```
+
+This writes an `openapi.yaml` file to the run directory, which you can use with any OpenAPI toolchain.
+
+## Discovered API endpoints
+
+| Method | Host | Endpoint | Purpose |
+|--------|------|----------|---------|
+| `POST` | `api.ingka.ikea.com` | `/guest/token` | Obtain guest JWT |
+| `POST` | `sik.search.blue.cdtapps.com` | `/{country}/{lang}/search` | Product search |
+| `GET` | `prod.cart.caas.selling.ingka.com` | `/api/v1/{country}` | Get cart |
+| `POST` | `prod.cart.caas.selling.ingka.com` | `/api/v1/{country}/items` | Add to cart |
+| `PATCH` | `prod.cart.caas.selling.ingka.com` | `/api/v1/{country}/items/{itemNo}` | Update quantity |
+| `DELETE` | `prod.cart.caas.selling.ingka.com` | `/api/v1/{country}/items/{itemNo}` | Remove from cart |
+| `POST` | `web-api.ikea.com` | `/wdm/api/discounts/get` | Get discounts |
+
+<Note>
+  Product details are retrieved via the search API using the item number as the query, because IKEA's direct product lookup endpoint requires additional authentication not present in a guest session.
+</Note>

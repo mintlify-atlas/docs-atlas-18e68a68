@@ -1,0 +1,80 @@
+---
+title: "Model selection"
+description: "Choose the AI model used for API client generation."
+---
+
+reverse-api-engineer uses separate model settings for each mode and SDK. The default model in all cases is `claude-sonnet-4-6`, which balances performance and cost well for most APIs.
+
+## Available models
+
+### Claude models
+
+These are the models available when using the Claude SDK (the default).
+
+| Model | Use case |
+|-------|----------|
+| `claude-sonnet-4-6` | Balanced performance and cost. Default for all modes. |
+| `claude-opus-4-6` | Maximum capability for complex or deeply nested APIs. |
+| `claude-haiku-4-5` | Fastest and most economical for simple APIs. |
+
+### Gemini models
+
+Gemini models are available when using the OpenCode SDK with `opencode_provider` set to `"google"`.
+
+| Model | Notes |
+|-------|-------|
+| `gemini-3-flash` | Fast, economical. |
+| `gemini-3-pro` | Balanced. |
+| `gemini-3-pro-low` | Lower-capability variant. |
+| `gemini-3-pro-high` | Higher-capability variant. |
+
+<Tip>
+  For the full list of models supported via OpenCode, see [models.dev](https://models.dev).
+</Tip>
+
+## Model settings per mode
+
+Different config keys control the model used in each context:
+
+| Config key | Used in |
+|------------|---------|
+| `claude_code_model` | Claude SDK sessions — manual, engineer, and agent modes. |
+| `collector_model` | Collector mode, regardless of SDK. |
+| `opencode_model` | OpenCode SDK sessions. Pair with `opencode_provider`. |
+
+## How to change the model
+
+Three ways to change the model:
+
+**Via the CLI settings menu:**
+
+Type `/settings` in the CLI and select the model option from the menu.
+
+**Via command line flag:**
+
+Pass `--model` when invoking a mode directly:
+
+```bash
+reverse-api-engineer manual --model claude-opus-4-6
+```
+
+**By editing `config.json` directly:**
+
+```json config.json
+{
+    "claude_code_model": "claude-opus-4-6"
+}
+```
+
+For OpenCode sessions, set both the model and provider:
+
+```json config.json
+{
+    "opencode_model": "gemini-3-pro",
+    "opencode_provider": "google"
+}
+```
+
+<Note>
+  OpenCode model values follow the format used by OpenCode itself — typically `{provider}/{model}` or just the model name depending on the provider. Check [models.dev](https://models.dev) for the exact identifier to use.
+</Note>

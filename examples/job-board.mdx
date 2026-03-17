@@ -1,0 +1,399 @@
+---
+title: "Job board API"
+description: "Reverse engineer a job listings API using manual mode."
+---
+
+This walkthrough captures the Apple Jobs API using manual mode and produces a ready-to-run Python client. It covers the full pipeline: launching the CLI, browsing the site, and reviewing the generated output.
+
+## End-to-end walkthrough
+
+<Steps>
+  <Step title="Launch the CLI">
+    Run `reverse-api-engineer` from the directory where you want the generated scripts to appear. The CLI starts in agent mode by default — press **Shift+Tab** once to switch to manual mode.
+
+    ```bash
+    reverse-api-engineer
+    ```
+
+    The mode indicator in the bottom-left corner of the prompt changes to `[manual]`.
+  </Step>
+
+  <Step title="Enter the task prompt">
+    Type a plain-language description of what you want to capture and press Enter:
+
+    ```
+    [manual] > fetch all apple jobs from their careers page
+    ```
+
+    The CLI then asks for a starting URL:
+
+    ```
+     > url  (Enter for none)
+    ```
+
+    Enter `https://jobs.apple.com` or press Enter to open a blank browser.
+  </Step>
+
+  <Step title="Interact with the browser">
+    A Chromium window opens with HAR recording active. Navigate the site to trigger the API calls you want to capture:
+
+    1. The page loads and shows the job search interface.
+    2. Use the search bar to query for roles (for example, "engineer").
+    3. Apply a location or team filter to capture filter parameters.
+    4. Scroll through results to capture pagination.
+
+    All network traffic is recorded in the background — no special action is needed.
+  </Step>
+
+  <Step title="Close the browser">
+    When you have captured a representative set of requests, close the browser window. The HAR file saves automatically and AI generation begins immediately.
+  </Step>
+
+  <Step title="Review the generated files">
+    Claude analyzes the HAR, identifies the search endpoint and authentication pattern, and writes the client. When generation completes, the files appear in two locations:
+
+    - `./scripts/apple_jobs_api/` — local copy in your current directory
+    - `~/.reverse-api/runs/scripts/{run_id}/` — permanent storage indexed by run ID
+
+    ```
+    ./scripts/apple_jobs_api/
+    ├── api_client.py
+    ├── README.md
+    └── example_usage.py
+    ```
+  </Step>
+</Steps>
+
+## Generated output
+
+The files below reflect what reverse-api-engineer produced from a real Apple Jobs capture.
+
+<CodeGroup>
+
+```python api_client.py
+"""
+Apple Jobs API Client
+
+This module provides a Python client for interacting with the Apple Jobs API.
+It handles CSRF token management and provides methods for searching and
+retrieving job postings from jobs.apple.com.
+
+Author: Generated from HAR file analysis
+"""
+
+import requests
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Location:
+    """Represents a job location."""
+    postLocationId: str
+    city: str
+    stateProvince: str
+    countryName: str
+    metro: str
+    region: str
+    name: str
+    countryID: str
+    level: int
+
+
+@dataclass
+class Team:
+    """Represents a team/department."""
+    teamName: str
+    teamID: str
+    teamCode: str
+
+
+@dataclass
+class Job:
+    """Represents an Apple job posting."""
+    id: str
+    positionId: str
+    postingTitle: str
+    postingDate: str
+    jobSummary: str
+    locations: List[Location]
+    team: Team
+    reqId: str
+    standardWeeklyHours: int
+    homeOffice: bool
+    isMultiLocation: bool
+    transformedPostingTitle: str
+
+    @property
+    def url(self) -> str:
+        """Generate the job URL."""
+        return (
+            f"https://jobs.apple.com/en-us/details/"
+            f"{self.positionId}/{self.transformedPostingTitle}"
+        )
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Job":
+        """Create a Job instance from API response data."""
+        locations = [Location(**loc) for loc in data.get("locations", [])]
+        team = Team(**data.get("team", {}))
+        return cls(
+            id=data.get("id", ""),
+            positionId=data.get("positionId", ""),
+            postingTitle=data.get("postingTitle", ""),
+            postingDate=data.get("postingDate", ""),
+            jobSummary=data.get("jobSummary", ""),
+            locations=locations,
+            team=team,
+            reqId=data.get("reqId", ""),
+            standardWeeklyHours=data.get("standardWeeklyHours", 0),
+            homeOffice=data.get("homeOffice", False),
+            isMultiLocation=data.get("isMultiLocation", False),
+            transformedPostingTitle=data.get("transformedPostingTitle", ""),
+        )
+
+
+class AppleJobsAPI:
+    """
+    Client for the Apple Jobs API.
+
+    Handles CSRF token management, session cookies, job search with
+    filters and pagination, and error handling.
+
+    Example:
+        >>> client = AppleJobsAPI()
+        >>> jobs = client.search_jobs(query="engineer", page=1)
+        >>> for job in jobs:
+        ...     print(f"{job.postingTitle} — {job.url}")
+    """
+
+    BASE_URL = "https://jobs.apple.com"
+    API_BASE = f"{BASE_URL}/api/v1"
+
+    def __init__(self, locale: str = "en-us"):
+        self.locale = locale
+        self.session = requests.Session()
+        self._csrf_token: Optional[str] = None
+
+        self.session.headers.update({
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/143.0.0.0 Safari/537.36"
+            ),
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Content-Type": "application/json",
+            "browserlocale": locale,
+            "locale": locale.replace("-", "_").upper(),
+            "Origin": self.BASE_URL,
+            "Referer": f"{self.BASE_URL}/{locale}/search",
+        })
+
+    def _get_csrf_token(self) -> str:
+        """Fetch a CSRF token from the API.
+
+        Returns:
+            The CSRF token string.
+
+        Raises:
+            requests.RequestException: If the token request fails.
+        """
+        response = self.session.get(f"{self.API_BASE}/CSRFToken")
+        response.raise_for_status()
+        csrf_token = response.headers.get("x-apple-csrf-token")
+        if not csrf_token:
+            raise ValueError("No CSRF token in response headers")
+        return csrf_token
+
+    def _ensure_csrf_token(self) -> None:
+        """Fetch and cache a CSRF token if one is not already set."""
+        if not self._csrf_token:
+            self._csrf_token = self._get_csrf_token()
+            self.session.headers.update({"x-apple-csrf-token": self._csrf_token})
+
+    def search_jobs(
+        self,
+        query: str = "",
+        filters: Optional[Dict[str, Any]] = None,
+        page: int = 1,
+    ) -> List[Job]:
+        """Search job postings on jobs.apple.com.
+
+        Args:
+            query: Search string (job title or description).
+            filters: Optional filter dict. Common keys:
+                - postLocation: list of location IDs, e.g. ["postLocation-USA"]
+                - team: list of team IDs
+            page: Page number (1-indexed).
+
+        Returns:
+            List of Job objects matching the criteria.
+        """
+        self._ensure_csrf_token()
+
+        payload = {
+            "query": query,
+            "filters": filters or {},
+            "page": page,
+            "locale": self.locale,
+            "sort": "",
+            "format": {
+                "longDate": "MMMM D, YYYY",
+                "mediumDate": "MMM D, YYYY",
+            },
+        }
+
+        response = self.session.post(f"{self.API_BASE}/search", json=payload)
+        response.raise_for_status()
+
+        data = response.json()
+        results = data.get("res", {}).get("searchResults", [])
+        return [Job.from_dict(r) for r in results]
+
+    def get_total_jobs(self, query: str = "") -> int:
+        """Return the total number of jobs matching a query."""
+        self._ensure_csrf_token()
+        payload = {
+            "query": query,
+            "filters": {},
+            "page": 1,
+            "locale": self.locale,
+            "sort": "",
+            "format": {"longDate": "MMMM D, YYYY", "mediumDate": "MMM D, YYYY"},
+        }
+        response = self.session.post(f"{self.API_BASE}/search", json=payload)
+        response.raise_for_status()
+        return response.json().get("res", {}).get("totalRecords", 0)
+
+    def search_all_jobs(
+        self,
+        query: str = "",
+        filters: Optional[Dict[str, Any]] = None,
+        max_pages: Optional[int] = None,
+    ) -> List[Job]:
+        """Fetch all matching jobs across pages, handling pagination automatically.
+
+        Args:
+            query: Search string.
+            filters: Optional filter dict.
+            max_pages: Cap on pages to fetch. Pass None for all pages.
+
+        Returns:
+            List of all Job objects found.
+        """
+        all_jobs: List[Job] = []
+        page = 1
+
+        while True:
+            if max_pages and page > max_pages:
+                break
+            jobs = self.search_jobs(query=query, filters=filters, page=page)
+            if not jobs:
+                break
+            all_jobs.extend(jobs)
+            logger.info(f"Fetched page {page} ({len(all_jobs)} jobs so far)")
+            page += 1
+
+        return all_jobs
+```
+
+```python example_usage.py
+#!/usr/bin/env python3
+"""Usage examples for the Apple Jobs API client."""
+
+from api_client import AppleJobsAPI
+import json
+
+# Initialize the client
+client = AppleJobsAPI(locale="en-us")
+
+# --- Example 1: first page of all jobs ---
+print("=== First page of jobs ===")
+jobs = client.search_jobs(page=1)
+for job in jobs[:5]:
+    print(f"Title:    {job.postingTitle}")
+    print(f"Location: {job.locations[0].name if job.locations else 'N/A'}")
+    print(f"URL:      {job.url}")
+    print("-" * 60)
+
+# --- Example 2: keyword search ---
+print("\n=== Keyword search: 'engineer' ===")
+engineer_jobs = client.search_jobs(query="engineer", page=1)
+print(f"Found {len(engineer_jobs)} results on page 1")
+
+# --- Example 3: location filter ---
+print("\n=== US jobs, page 1 ===")
+us_jobs = client.search_jobs(
+    filters={"postLocation": ["postLocation-USA"]},
+    page=1,
+)
+print(f"Found {len(us_jobs)} US jobs on page 1")
+
+# --- Example 4: get total count ---
+total = client.get_total_jobs()
+print(f"\nTotal jobs available: {total}")
+
+# --- Example 5: export to JSON ---
+all_jobs = client.search_all_jobs(max_pages=3)
+results = [
+    {
+        "url": job.url,
+        "title": job.postingTitle,
+        "location": job.locations[0].name if job.locations else "N/A",
+        "description": job.jobSummary,
+    }
+    for job in all_jobs
+]
+
+with open("apple_jobs.json", "w", encoding="utf-8") as f:
+    json.dump(results, f, indent=2, ensure_ascii=False)
+
+print(f"Exported {len(results)} jobs to apple_jobs.json")
+```
+
+</CodeGroup>
+
+## How the authentication works
+
+Apple's job search API requires a CSRF token for every POST request. The generated client handles this automatically:
+
+1. On the first request, `_ensure_csrf_token()` calls `GET /api/v1/CSRFToken`.
+2. The token is read from the `x-apple-csrf-token` response header.
+3. The token is cached on the session and included in all subsequent requests.
+4. Session cookies (`jobs`, `jssid`) are managed by `requests.Session` automatically.
+
+## Regenerating the client with engineer mode
+
+If you want to regenerate the client from the same capture — for example, to ask for a different output format or add extra methods — use engineer mode with the run ID:
+
+```bash
+reverse-api-engineer engineer <run_id>
+```
+
+You can also switch to engineer mode inside the CLI by pressing **Shift+Tab**, then enter the run ID or use the `@id` tag:
+
+```
+[engineer] > @id <run_id> add a method to export jobs to CSV
+```
+
+To generate an OpenAPI specification from the same capture:
+
+```
+[engineer] > @id <run_id> @docs
+```
+
+This writes an `openapi.yaml` file to the run's output directory.
+
+## Discovered API endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/api/v1/CSRFToken` | Obtain session cookies and a CSRF token |
+| `POST` | `/api/v1/search` | Search jobs with query, filters, and pagination |
+
+The search endpoint returns up to 20 results per page. Use `totalRecords` from the response to calculate the total number of pages.

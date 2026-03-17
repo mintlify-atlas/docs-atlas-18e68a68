@@ -1,80 +1,155 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get from install to your first generated API client in five minutes."
 ---
 
-## Get started in three steps
+This guide walks you through launching the CLI, entering your first task, browsing a website, and reviewing the generated API client.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Make sure you have completed [installation](/installation) and have:
+- `reverse-api-engineer` installed (`uv tool install reverse-api-engineer`)
+- Playwright Chromium installed (`playwright install chromium`)
+- `ANTHROPIC_API_KEY` set in your environment
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Your first API client
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Launch the CLI">
+    Run the CLI from any directory:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    reverse-api-engineer
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    The interactive prompt appears with the current mode shown in brackets. The default mode is **agent**.
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```
+    [agent] > 
+    ```
 
-### Step 3: Go live
+    <Tip>
+      Press **Shift+Tab** to cycle through modes: agent → manual → engineer → collector. The mode indicator updates in real time.
+    </Tip>
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Switch to manual mode and enter a task">
+    Press **Shift+Tab** once to switch to manual mode, then type a description of what you want to capture:
+
+    ```
+    [manual] > fetch all apple jobs from their careers page
+    ```
+
+    The CLI will ask for a starting URL (optional):
+
+    ```
+    Starting URL (optional, press Enter to skip):
+    > https://jobs.apple.com
+    ```
+  </Step>
+
+  <Step title="Browse the website">
+    A Chromium browser opens with HAR recording active. Navigate and interact normally:
+
+    - Search for jobs
+    - Click through listings
+    - Apply any filters you want the API client to support
+
+    The browser records every network request in the background.
+
+    <Note>
+      The browser uses stealth mode to minimize bot detection. Browse naturally — don't rush through interactions.
+    </Note>
+  </Step>
+
+  <Step title="Close the browser">
+    When you're done exploring the site, close the browser window. The CLI detects the closure and starts AI analysis automatically:
+
+    ```
+    ✓ Browser closed — HAR captured
+    ✓ Analyzing 47 requests...
+    ✓ Identified 3 API endpoints
+    ✓ Generating api_client.py...
+    ```
+
+    The AI filters noise (analytics, ads, CDN requests) and focuses on the relevant API calls.
+  </Step>
+
+  <Step title="Review your generated files">
+    When generation completes, find your files in two locations:
+
+    ```
+    ✓ Scripts saved to: ./scripts/apple_jobs_api/
+    ```
+
+    ```
+    ./scripts/apple_jobs_api/
+    ├── api_client.py      # Full API implementation
+    ├── README.md          # Endpoint documentation
+    └── example_usage.py   # Runnable usage examples
+    ```
+
+    Open `api_client.py` to see the generated client with type hints, docstrings, and error handling.
+  </Step>
+</Steps>
+
+## Slash commands inside the CLI
+
+While the CLI is running, you can use these slash commands:
+
+| Command | Description |
+|---------|-------------|
+| `/settings` | Configure model, SDK, output language, agent provider |
+| `/history` | View past runs with costs and timestamps |
+| `/messages <run_id>` | View detailed message logs for a run |
+| `/help` | Show all available commands |
+| `/exit` | Quit the CLI |
+
+```
+[manual] > /history
+
+  run_id           date              cost     prompt
+  abc-123-def      2026-03-17 14:32  $0.0234  fetch all apple jobs...
+  xyz-789-ghi      2026-03-16 10:15  $0.0189  scrape product catalog...
+```
+
+## Try agent mode
+
+Agent mode lets the AI browse autonomously — no manual navigation needed:
+
+```bash
+reverse-api-engineer
+```
+
+```
+[agent] > find the top 10 job listings on LinkedIn for Python engineers in San Francisco
+```
+
+The agent controls the browser, navigates the site, and captures the relevant traffic without any input from you.
+
+## Re-engineer a capture
+
+If you want to regenerate the client with different instructions, switch to engineer mode and reference your run ID:
+
+```
+[engineer] > @id abc-123-def generate a more detailed client with pagination support
+```
+
+See [Engineer mode](/modes/engineer) for all the engineer mode tags.
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Usage modes" icon="terminal" href="/modes/manual">
+    Deep dive into Manual, Engineer, Agent, and Collector modes.
+  </Card>
+  <Card title="Tags" icon="tag" href="/tags">
+    Use @record-only, @codegen, @docs, and @id for fine-grained control.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Set your preferred model, output language, and SDK.
+  </Card>
+  <Card title="Examples" icon="lightbulb" href="/examples/job-board">
+    See real end-to-end examples with generated code.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

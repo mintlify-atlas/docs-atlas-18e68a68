@@ -1,0 +1,88 @@
+---
+title: "Configuration overview"
+description: "All settings for reverse-api-engineer, stored in ~/.reverse-api/config.json."
+---
+
+reverse-api-engineer stores its configuration in a JSON file on your local machine. You can edit settings through the interactive CLI or by editing the file directly.
+
+## Config file location
+
+```
+~/.reverse-api/config.json
+```
+
+## How to edit settings
+
+- **In the CLI**: type `/settings` at any prompt and use the interactive menu.
+- **Directly**: open `~/.reverse-api/config.json` in any text editor and edit the JSON.
+
+Changes to the file take effect the next time you launch the CLI.
+
+## Default config
+
+This is the full configuration file with all keys set to their defaults:
+
+```json config.json
+{
+    "agent_provider": "auto",
+    "browser_use_model": "bu-llm",
+    "claude_code_model": "claude-sonnet-4-6",
+    "collector_model": "claude-sonnet-4-6",
+    "opencode_model": "claude-opus-4-6",
+    "opencode_provider": "anthropic",
+    "output_dir": null,
+    "output_language": "python",
+    "real_time_sync": true,
+    "sdk": "claude",
+    "stagehand_model": "openai/computer-use-preview-2025-03-11"
+}
+```
+
+<Note>
+  Keys not present in your config file fall back to their defaults automatically. You only need to set the keys you want to change.
+</Note>
+
+## All config keys
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `agent_provider` | string | `"auto"` | Browser agent provider: `"auto"`, `"browser-use"`, or `"stagehand"`. |
+| `browser_use_model` | string | `"bu-llm"` | Model used by the browser-use agent. |
+| `claude_code_model` | string | `"claude-sonnet-4-6"` | Model used for Claude SDK engineering sessions (manual, engineer, and agent modes). |
+| `collector_model` | string | `"claude-sonnet-4-6"` | Model used for collector mode. |
+| `opencode_model` | string | `"claude-opus-4-6"` | Model used for OpenCode SDK sessions. |
+| `opencode_provider` | string | `"anthropic"` | Provider used for OpenCode SDK sessions. |
+| `output_dir` | string or null | `null` | Custom output directory. `null` uses `~/.reverse-api/runs/`. |
+| `output_language` | string | `"python"` | Language for generated API clients: `"python"`, `"javascript"`, or `"typescript"`. |
+| `real_time_sync` | boolean | `true` | Write generated files to disk as they are produced. When `false`, files are written at the end of the session. |
+| `sdk` | string | `"claude"` | SDK to use for engineering sessions: `"claude"` or `"opencode"`. |
+| `stagehand_model` | string | `"openai/computer-use-preview-2025-03-11"` | Model used by the Stagehand agent. |
+
+## Backward compatibility
+
+Older versions of reverse-api-engineer used different key names. When the config file is loaded, these are automatically migrated:
+
+| Old key | Migrates to |
+|---------|-------------|
+| `model` | `claude_code_model` |
+| `agent_model` (with `agent_provider: "stagehand"`) | `stagehand_model` |
+| `agent_model` (all other providers) | `browser_use_model` |
+
+You do not need to update old config files manually.
+
+## Detailed configuration guides
+
+<Columns cols={2}>
+  <Card title="Model selection" icon="microchip" href="/configuration/model-selection">
+    Choose the Claude or Gemini model used for API client generation.
+  </Card>
+  <Card title="Agent providers" icon="robot" href="/configuration/agent-providers">
+    Configure the AI agent used for autonomous browser navigation.
+  </Card>
+  <Card title="SDK selection" icon="code" href="/configuration/sdk-selection">
+    Switch between the Claude Agent SDK and the OpenCode SDK.
+  </Card>
+  <Card title="Output settings" icon="folder-open" href="/configuration/output-settings">
+    Control output language, directory, and real-time sync behavior.
+  </Card>
+</Columns>

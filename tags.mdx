@@ -1,0 +1,207 @@
+---
+title: "Tags"
+description: "Fine-grained control over capture and generation using @-prefixed tags in your prompts."
+---
+
+Tags are `@`-prefixed modifiers you type directly in the CLI prompt. They change how a run behaves—skipping reverse engineering, switching to a specific capture, or generating documentation instead of code.
+
+Two sets of tags are available depending on which mode you are in.
+
+## Manual and agent mode tags
+
+These tags work in both `manual` and `agent` modes. Type them at the start of your prompt before your task description.
+
+<AccordionGroup>
+  <Accordion title="@record-only — record HAR only, skip reverse engineering">
+    Captures browser traffic into a HAR file but skips the AI generation step entirely. Use this when you want to record a session now and engineer it later, or when you are troubleshooting a capture before committing API keys to a generation run.
+
+    **Syntax**
+
+    ```
+    @record-only <prompt>
+    ```
+
+    **When to use it**
+    - You want to capture traffic without spending API credits.
+    - You plan to re-engineer the same capture multiple times with different prompts.
+    - You need to review the HAR file before running generation.
+
+    **Example**
+
+    ```bash
+    @record-only navigate checkout flow
+    ```
+
+    After recording, the CLI prints the `run_id`. Pass it to engineer mode to generate code later:
+
+    ```bash
+    [engineer] > @id <run_id> extract payment endpoints
+    ```
+
+    <Tip>
+      In agent mode, `@record-only` requires a prompt. The agent needs a goal to navigate—omitting the prompt returns an error.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="@codegen — record browser actions and generate a Playwright script">
+    Records both network traffic and your browser interactions (clicks, form fills, and navigations), then generates a reusable Playwright automation script instead of an API client.
+
+    **Syntax**
+
+    ```
+    @codegen <prompt>
+    ```
+
+    **When to use it**
+    - You want to automate a browser workflow, not extract an API.
+    - You are building end-to-end tests or browser automation scripts.
+    - You want to reproduce a multi-step interaction programmatically.
+
+    **Example**
+
+    ```bash
+    @codegen navigate to google
+    ```
+
+    The generated `automation.py` (and `requirements.txt`) are written to `./scripts/{run_id}/`.
+
+    <Note>
+      `@codegen` only works in manual mode. Switch to `[manual]` with **Shift+Tab** before using this tag.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Engineer mode tags
+
+These tags work in `engineer` mode. They let you target specific runs, control whether to start from scratch, and switch between generating API clients and OpenAPI documentation.
+
+<AccordionGroup>
+  <Accordion title="@id <run_id> — switch context to a specific run">
+    Loads the capture and generated scripts for the specified run and sets it as the active context. Subsequent prompts without an explicit `@id` will operate on this run.
+
+    **Syntax**
+
+    ```
+    @id <run_id>
+    ```
+
+    **When to use it**
+    - You want to switch to a different run without running generation.
+    - You need to set a run as the working context before entering follow-up instructions.
+
+    **Example**
+
+    ```bash
+    @id abc123
+    ```
+
+    You can also switch context by entering the run ID directly, without the `@id` prefix:
+
+    ```bash
+    abc123
+    ```
+
+    <Tip>
+      The prompt supports tab completion for run IDs. Start typing a run ID and press **Tab** to see matches from your history.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="@id <run_id> <prompt> — run engineer on a specific run with instructions">
+    Re-processes the capture for the specified run using the instructions you provide. The AI treats any previously generated scripts as context and applies your instructions additively.
+
+    **Syntax**
+
+    ```
+    @id <run_id> <prompt>
+    ```
+
+    **When to use it**
+    - You want to add more endpoints to an existing API client.
+    - You need to improve error handling, add type hints, or adjust authentication.
+    - You want to focus the AI on a specific area of a large HAR capture.
+
+    **Example**
+
+    ```bash
+    @id abc123 extract user profile endpoints
+    ```
+  </Accordion>
+
+  <Accordion title="@id <run_id> --fresh <prompt> — start fresh, ignore previous scripts">
+    Re-processes the capture for the specified run but ignores any previously generated scripts. The AI generates new code from scratch using only the HAR file and your prompt.
+
+    **Syntax**
+
+    ```
+    @id <run_id> --fresh <prompt>
+    ```
+
+    **When to use it**
+    - The previous generation went in the wrong direction and you want to start over.
+    - You want to try a completely different approach or output structure.
+    - Previous scripts have accumulated too many layers of incremental edits.
+
+    **Example**
+
+    ```bash
+    @id abc123 --fresh restart analysis
+    ```
+  </Accordion>
+
+  <Accordion title="@docs — generate OpenAPI documentation for the latest run">
+    Generates an OpenAPI specification from the most recent run's captured HAR traffic instead of a Python API client.
+
+    **Syntax**
+
+    ```
+    @docs
+    ```
+
+    **When to use it**
+    - You want machine-readable API documentation from a capture.
+    - You are building tooling that consumes an OpenAPI spec.
+    - You want to share or import the API definition into another tool.
+
+    **Example**
+
+    ```bash
+    @docs
+    ```
+
+    <Note>
+      `@docs` requires the target run to have a HAR file. If the run has no captured traffic, engineer mode prints an error.
+    </Note>
+  </Accordion>
+
+  <Accordion title="@id <run_id> @docs — generate documentation for a specific run">
+    Generates an OpenAPI specification from the captured traffic for the specified run.
+
+    **Syntax**
+
+    ```
+    @id <run_id> @docs
+    ```
+
+    **When to use it**
+    - You want to generate docs for a run other than the most recent one.
+    - You are documenting multiple captures and need to target each by ID.
+
+    **Example**
+
+    ```bash
+    @id abc123 @docs
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Tag quick reference
+
+| Tag | Mode | Behavior |
+|-----|------|----------|
+| `@record-only <prompt>` | manual, agent | Capture HAR only, skip reverse engineering |
+| `@codegen <prompt>` | manual | Record actions and generate Playwright script |
+| `@id <run_id>` | engineer | Switch context to a specific run |
+| `@id <run_id> <prompt>` | engineer | Re-run generation with additive instructions |
+| `@id <run_id> --fresh <prompt>` | engineer | Re-run from scratch, ignore previous scripts |
+| `@docs` | engineer | Generate OpenAPI docs for the latest run |
+| `@id <run_id> @docs` | engineer | Generate OpenAPI docs for a specific run |

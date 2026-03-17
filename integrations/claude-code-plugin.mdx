@@ -1,0 +1,134 @@
+---
+title: 'Claude Code plugin'
+description: Use reverse-api-engineer directly inside Claude Code with slash commands and a proactive agent.
+---
+
+The Claude Code plugin brings reverse-api-engineer into your Claude Code REPL. Install it once and get slash commands for manual capture, HAR re-analysis, and autonomous agent mode — plus a proactive agent that triggers automatically when you describe API tasks in conversation.
+
+## Installation
+
+<CodeGroup>
+
+```bash Marketplace
+claude # Open REPL
+/plugin marketplace add kalil0321/reverse-api-engineer
+/plugin install reverse-api-engineer@reverse-api-engineer
+```
+
+```bash Local development
+claude
+/plugin marketplace add .
+/plugin install reverse-api-engineer@reverse-api-engineer
+```
+
+</CodeGroup>
+
+<Note>
+The plugin automatically installs the `rae-playwright-mcp` MCP server when it loads. Node.js must be available on your PATH.
+</Note>
+
+## Commands
+
+### `/reverse-api-engineer:manual [task] [url]`
+
+Launch a browser with HAR recording enabled. Navigate manually to trigger API calls, then close the browser. The AI analyzes the captured traffic and generates a Python API client.
+
+```
+/reverse-api-engineer:manual "fetch Apple jobs" https://jobs.apple.com
+```
+
+**Workflow:**
+
+<Steps>
+  <Step title="Browser opens with HAR recording">Navigate and interact with the site to trigger the API calls you want to capture.</Step>
+  <Step title="Close the browser">The HAR file is saved to `~/.reverse-api/runs/har/{run_id}/recording.har`.</Step>
+  <Step title="AI generates the client">Scripts are saved to `./scripts/{task_name}/` with `api_client.py` and `README.md`.</Step>
+</Steps>
+
+### `/reverse-api-engineer:engineer <run_id|har_path>`
+
+Re-run AI generation on a previous HAR capture without launching a browser. Useful for iterating on the generated client or extracting additional endpoints from the same traffic.
+
+```
+/reverse-api-engineer:engineer abc-123-def
+/reverse-api-engineer:engineer ~/.reverse-api/runs/har/xyz-789/recording.har
+```
+
+### `/reverse-api-engineer:agent [task] [url]`
+
+Autonomous browser navigation using Playwright MCP. The agent navigates the site, captures traffic, and generates the API client without manual interaction.
+
+```
+/reverse-api-engineer:agent "find all job listings" https://jobs.apple.com
+```
+
+## Proactive agent
+
+The plugin registers an agent that monitors your conversation and offers to help when you mention any of the following phrases:
+
+- "reverse engineer an API"
+- "create API client for..."
+- "automate interactions with..."
+- "scrape data from..."
+- "HAR file analysis"
+
+You do not need to use a slash command — describe the task naturally and the agent will activate.
+
+```
+You: "I need to automate fetching data from this website's API"
+Agent: "I can help reverse engineer that API! I'll launch a browser with HAR recording..."
+```
+
+## Skill
+
+The `reverse-engineering-api` skill activates automatically on API reverse engineering tasks. It provides step-by-step guidance for:
+
+<Columns cols={2}>
+  <Card title="Capture" icon="video">
+    Browser setup and HAR recording with manual or autonomous navigation.
+  </Card>
+  <Card title="Analysis" icon="magnifying-glass">
+    HAR file filtering and API endpoint identification.
+  </Card>
+  <Card title="Authentication" icon="key">
+    Detecting Bearer tokens, API keys, OAuth flows, and session cookies.
+  </Card>
+  <Card title="Code generation" icon="code">
+    Producing production-ready Python clients with full type hints.
+  </Card>
+  <Card title="Testing" icon="flask-vial">
+    Validating and refining the generated client against live endpoints.
+  </Card>
+</Columns>
+
+## Output structure
+
+```
+~/.reverse-api/
+├── history.json                         # Run history
+└── runs/
+    └── har/{run_id}/
+        └── recording.har                # Captured traffic
+
+./scripts/{task_name}/
+├── api_client.py                        # Generated API client
+└── README.md                            # Usage documentation
+```
+
+## Generated code quality
+
+All API clients produced by the plugin include:
+
+- Type hints for all parameters and return values
+- Docstrings for all public methods
+- Error handling with proper exceptions
+- Logging for debugging
+- Session management for connection reuse
+- Authentication handling (Bearer tokens, API keys, OAuth)
+
+## Prerequisites
+
+| Requirement | Notes |
+|-------------|-------|
+| Node.js | Required to run the Playwright MCP server |
+| Playwright MCP (`rae-playwright-mcp`) | Installed automatically when the plugin loads |

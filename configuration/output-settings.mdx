@@ -1,0 +1,79 @@
+---
+title: "Output settings"
+description: "Control the output language, directory, and real-time sync behavior."
+---
+
+Three config keys control how and where reverse-api-engineer writes generated files.
+
+## Output language
+
+**Config key:** `output_language`  
+**Default:** `"python"`  
+**Options:** `"python"`, `"javascript"`, `"typescript"`
+
+reverse-api-engineer generates API clients in the language you choose. The setting is applied at the start of each engineering session and is preserved across iterative engineer runs on the same capture.
+
+Change it in `/settings` → "Output Language", or edit `config.json`:
+
+```json config.json
+{
+    "output_language": "typescript"
+}
+```
+
+## Output directory
+
+**Config key:** `output_dir`  
+**Default:** `null` (uses `~/.reverse-api/runs/`)
+
+By default, all output is stored under `~/.reverse-api/runs/`. You can set a custom base directory:
+
+```json config.json
+{
+    "output_dir": "/path/to/my/projects"
+}
+```
+
+Generated files are always written to two locations:
+
+- **Permanent storage:** `~/.reverse-api/runs/scripts/{run_id}/` (or your custom `output_dir`)
+- **Local copy:** `./scripts/{descriptive_name}/` in your current working directory
+
+For collector mode, the local copy goes to `./collected/{name}/` instead.
+
+Change the directory in `/settings` → "Output Directory".
+
+## Real-time sync
+
+**Config key:** `real_time_sync`  
+**Default:** `true`
+
+When real-time sync is enabled, files are written to disk as the AI generates them. You can open the output directory in your editor and watch files appear in real time.
+
+When disabled, files are written only after the session completes.
+
+Change it in `/settings` → "Real-time Sync", or edit `config.json`:
+
+```json config.json
+{
+    "real_time_sync": false
+}
+```
+
+## Output directory structure
+
+The full layout of the `~/.reverse-api/` directory:
+
+```
+~/.reverse-api/
+├── config.json            # User configuration
+├── history.json           # Run history with costs
+└── runs/
+    ├── har/{run_id}/      # Captured HAR files
+    ├── scripts/{run_id}/  # Generated API clients
+    └── messages/{run_id}.jsonl  # LLM conversation logs
+```
+
+<Tip>
+  View the history of all runs, including token usage and cost, by typing `/history` in the CLI.
+</Tip>

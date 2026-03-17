@@ -1,0 +1,281 @@
+---
+title: "CLI commands"
+description: "Complete reference for all CLI commands, subcommands, flags, and slash commands."
+---
+
+Reverse API Engineer exposes two sets of commands: terminal subcommands you run directly from your shell, and slash commands you type inside the running interactive CLI.
+
+## Terminal subcommands
+
+All subcommands are invoked as `reverse-api-engineer <subcommand>`. Running `reverse-api-engineer` with no arguments launches the interactive CLI.
+
+### `reverse-api-engineer` (no arguments)
+
+Launches the interactive REPL loop. This is the primary entry point for all daily use.
+
+```bash
+reverse-api-engineer
+```
+
+The prompt shows the current mode (`agent`, `manual`, `engineer`, or `collector`). Press **Shift+Tab** to cycle through modes.
+
+---
+
+### `manual`
+
+Starts a manual browser session directly, bypassing the interactive mode-selection prompt.
+
+```bash
+reverse-api-engineer manual [OPTIONS]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--prompt`, `-p` | string | — | Task description for the capture session. If omitted, the CLI prompts you interactively. |
+| `--url`, `-u` | string | — | Starting URL to open in the browser. Leave blank to open a fresh browser window. |
+| `--model`, `-m` | choice | config value | Claude model to use for generation. One of `claude-sonnet-4-6`, `claude-opus-4-6`, `claude-haiku-4-5`. |
+| `--reverse-engineer` / `--no-engineer` | flag | `--reverse-engineer` | Run AI generation after capture. Use `--no-engineer` to record only. |
+| `--output-dir`, `-o` | string | config value | Custom directory for storing HAR files and generated scripts. |
+
+**Example**
+
+```bash
+reverse-api-engineer manual --prompt "fetch apple jobs" --url https://jobs.apple.com --model claude-sonnet-4-6
+```
+
+---
+
+### `engineer`
+
+Re-runs AI generation on a previous capture without opening a browser.
+
+```bash
+reverse-api-engineer engineer <run_id> [OPTIONS]
+```
+
+| Argument / Flag | Type | Default | Description |
+|----------------|------|---------|-------------|
+| `run_id` | string | required | The run ID of the capture to re-engineer. |
+| `--model`, `-m` | choice | config value | Claude model to use. One of `claude-sonnet-4-6`, `claude-opus-4-6`, `claude-haiku-4-5`. |
+| `--output-dir`, `-o` | string | config value | Custom output directory. |
+
+**Example**
+
+```bash
+reverse-api-engineer engineer abc123 --model claude-opus-4-6
+```
+
+<Tip>
+  Inside the interactive CLI, engineer mode supports a richer tag system (`@id`, `@docs`, `--fresh`) that is not available through the terminal subcommand. See [Tags](/tags) for the full reference.
+</Tip>
+
+---
+
+### `agent`
+
+Runs an autonomous AI agent that navigates the browser and captures traffic without manual interaction.
+
+```bash
+reverse-api-engineer agent [OPTIONS]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--prompt`, `-p` | string | — | Instruction for the agent. If omitted, the CLI prompts you interactively. |
+
+**Example**
+
+```bash
+reverse-api-engineer agent --prompt "fetch all Apple job listings from their careers page"
+```
+
+---
+
+### `show`
+
+Displays detailed information about a specific run, including the prompt, model, cost, token usage, file paths, and HAR entry count.
+
+```bash
+reverse-api-engineer show [run_id] [OPTIONS]
+```
+
+| Argument / Flag | Type | Default | Description |
+|----------------|------|---------|-------------|
+| `run_id` | string | latest run | Run ID to inspect. If omitted, shows the most recent run. |
+| `--json` | flag | off | Output the result as a JSON object. |
+
+**Example**
+
+```bash
+reverse-api-engineer show abc123
+reverse-api-engineer show abc123 --json
+```
+
+<Note>
+  `show` was added in v0.4.1. Use `/history` inside the interactive CLI for a quick summary table of past runs.
+</Note>
+
+---
+
+### `list`
+
+Lists all runs with optional filters and output formats.
+
+```bash
+reverse-api-engineer list [OPTIONS]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | flag | off | Output as a flat JSON array. |
+| `--full` | flag | off | Show all columns (model, SDK, cost, script directory). |
+| `--limit`, `-n` | integer | — | Limit the number of results returned. |
+| `--mode`, `-m` | string | — | Filter by mode: `auto`, `manual`, `agent`, `engineer`, or `collector`. |
+| `--model` | string | — | Filter by model name (case-insensitive substring match). |
+| `--search`, `-s` | string | — | Case-insensitive substring match on the prompt text. |
+
+**Examples**
+
+```bash
+# Show the last 10 runs
+reverse-api-engineer list --limit 10
+
+# Show only agent runs in full detail
+reverse-api-engineer list --mode agent --full
+
+# Export all runs as JSON
+reverse-api-engineer list --json
+```
+
+---
+
+### `install-host`
+
+Installs the native messaging host that allows the Chrome extension to communicate with the CLI.
+
+```bash
+reverse-api-engineer install-host --extension-id <ID>
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--extension-id` | string | required | The 32-character Chrome extension ID. Find it on `chrome://extensions/` after loading the extension. |
+
+**Example**
+
+```bash
+reverse-api-engineer install-host --extension-id abcdefghijklmnopqrstuvwxyz123456
+```
+
+See [Chrome extension](/integrations/chrome-extension) for the full setup guide.
+
+---
+
+## Slash commands
+
+Slash commands are available inside the interactive CLI. Type them at the prompt at any time, regardless of the current mode.
+
+<AccordionGroup>
+  <Accordion title="/settings — configure the CLI">
+    Opens an interactive settings menu where you can change the model, SDK, agent provider, output language, output directory, and real-time sync behavior.
+
+    ```bash
+    /settings
+    ```
+
+    Configurable options:
+
+    | Setting | Description |
+    |---------|-------------|
+    | **Agent Provider** | Choose between `auto`, `browser-use`, and `stagehand`. |
+    | **Browser-Use Model** | Model for the browser-use agent provider. |
+    | **Claude Code Model** | Claude model used for reverse engineering. |
+    | **OpenCode Model** | Model used when the OpenCode SDK is selected. |
+    | **OpenCode Provider** | Provider for the OpenCode SDK (e.g., `anthropic`, `google`). |
+    | **Output Directory** | Custom path for storing runs. Defaults to `~/.reverse-api/runs`. |
+    | **Output Language** | Language for generated API clients: `python`, `javascript`, or `typescript`. |
+    | **Real-time Sync** | Enable or disable writing files to disk as they are generated. |
+    | **SDK** | Choose between `claude`, `opencode`, and `copilot`. |
+    | **Stagehand Model** | Model for the stagehand agent provider. |
+
+    Settings are saved to `~/.reverse-api/config.json`.
+  </Accordion>
+
+  <Accordion title="/history — view past runs">
+    Displays a scrollable list of your last 15 runs with run IDs, prompt snippets, and estimated costs. Select a run to view its full details and optionally re-engineer it.
+
+    ```bash
+    /history
+    ```
+
+    The list shows:
+    - Run ID
+    - Prompt (truncated to 40 characters)
+    - Estimated cost in USD
+
+    Select a run to see the full details and be prompted to re-engineer it.
+  </Accordion>
+
+  <Accordion title="/messages <run_id> — view message logs for a run">
+    Displays the full message log for a specific run, including prompts, tool calls, tool results, thinking output, and errors.
+
+    ```bash
+    /messages <run_id>
+    ```
+
+    **Example**
+
+    ```bash
+    /messages abc123
+    ```
+
+    <Tip>
+      The `/messages` command supports tab completion for run IDs. Type `/messages ` (with a space) and press **Tab** to see a list of run IDs from your history.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="/help — show available commands">
+    Prints a summary of all slash commands and the available modes.
+
+    ```bash
+    /help
+    ```
+
+    You can also type `@help` for mode-specific help. The output changes depending on whether you are in `manual`, `agent`, `engineer`, or `collector` mode.
+  </Accordion>
+
+  <Accordion title="/exit and /quit — quit the CLI">
+    Exits the interactive CLI and returns to your shell. Both commands are equivalent.
+
+    ```bash
+    /exit
+    /quit
+    ```
+
+    You can also press **Ctrl+C** or **Ctrl+D** to quit.
+  </Accordion>
+</AccordionGroup>
+
+## Quick reference
+
+### Terminal subcommands
+
+| Command | Description |
+|---------|-------------|
+| `reverse-api-engineer` | Launch interactive CLI |
+| `reverse-api-engineer manual` | Start a manual browser session |
+| `reverse-api-engineer engineer <run_id>` | Re-engineer a specific run |
+| `reverse-api-engineer agent` | Run autonomous agent capture |
+| `reverse-api-engineer show [run_id]` | Show details for a run |
+| `reverse-api-engineer list` | List all runs with optional filters |
+| `reverse-api-engineer install-host --extension-id <ID>` | Install Chrome extension native host |
+
+### Slash commands
+
+| Command | Description |
+|---------|-------------|
+| `/settings` | Configure model, SDK, agent provider, output language, and more |
+| `/history` | View past runs with costs and timestamps |
+| `/messages <run_id>` | View detailed message logs for a run |
+| `/help` | Show all available commands |
+| `/exit` or `/quit` | Quit the CLI |
